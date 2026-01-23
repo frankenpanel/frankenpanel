@@ -1,0 +1,101 @@
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         MULTI-SITE MANAGEMENT SYSTEM                     │
+│                              Architecture Diagram                        │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           CLIENT LAYER                                   │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                  │
+│  │   Browser    │  │   Mobile     │  │   API Client │                  │
+│  │   (HTTPS)    │  │   App        │  │   (cURL)     │                  │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘                  │
+└─────────┼─────────────────┼─────────────────┼──────────────────────────┘
+          │                 │                 │
+          └─────────────────┼─────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        REVERSE PROXY LAYER                                │
+│  ┌──────────────────────────────────────────────────────────────┐      │
+│  │                        CADDY                                  │      │
+│  │  - SSL/TLS Termination                                        │      │
+│  │  - Domain Routing                                             │      │
+│  │  - Load Balancing (future)                                    │      │
+│  │  - Automatic Certificate Management                           │      │
+│  └──────┬───────────────────────────────┬───────────────────────┘      │
+└─────────┼───────────────────────────────┼──────────────────────────────┘
+          │                               │
+          │                               │
+    ┌─────▼─────┐                  ┌─────▼─────┐
+    │   Admin   │                  │   PHP      │
+    │ Dashboard │                  │   Sites    │
+    │ (React)   │                  │(FrankenPHP)│
+    │ Port:8000 │                  │ Port:8081+ │
+    └─────┬─────┘                  └─────┬─────┘
+          │                               │
+          │                               │
+┌─────────▼───────────────────────────────▼───────────────────────────────┐
+│                        ORCHESTRATION LAYER                               │
+│  ┌──────────────────────────────────────────────────────────────┐      │
+│  │                    FASTAPI BACKEND                            │      │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐        │      │
+│  │  │   Auth      │  │   Sites      │  │  Databases   │        │      │
+│  │  │   Service   │  │   Service    │  │  Service     │        │      │
+│  │  └──────────────┘  └──────────────┘  └──────────────┘        │      │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐        │      │
+│  │  │   Domains    │  │   Backups    │  │  FrankenPHP  │        │      │
+│  │  │   Service    │  │   Service   │  │  Service     │        │      │
+│  │  └──────────────┘  └──────────────┘  └──────────────┘        │      │
+│  │  ┌──────────────┐  ┌──────────────┐                        │      │
+│  │  │   Caddy      │  │   Audit      │                        │      │
+│  │  │   Service    │  │   Logging    │                        │      │
+│  │  └──────────────┘  └──────────────┘                        │      │
+│  └──────────────────────────────────────────────────────────────┘      │
+└─────────┬───────────────────────────────┬───────────────────────────────┘
+          │                               │
+          │                               │
+    ┌─────▼─────┐                  ┌─────▼─────┐
+    │PostgreSQL │                  │MySQL/     │
+    │(Metadata) │                  │MariaDB    │
+    │           │                  │(Per-site) │
+    │ - Users   │                  │           │
+    │ - Sites   │                  │ - Site1 DB│
+    │ - Domains │                  │ - Site2 DB│
+    │ - Logs    │                  │ - SiteN DB│
+    └───────────┘                  └───────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           STORAGE LAYER                                  │
+│  /opt/frankenpanel/                                                      │
+│  ├── control-panel/  (Backend + Frontend)                               │
+│  ├── sites/          (PHP site files)                                    │
+│  ├── databases/      (MySQL metadata)                                   │
+│  ├── backups/        (Encrypted backups)                                 │
+│  ├── logs/           (System + Site logs)                               │
+│  ├── config/         (Generated configs)                                 │
+│  └── runtime/        (FrankenPHP workers)                                │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         SECURITY LAYER                                   │
+│  - JWT Authentication                                                    │
+│  - RBAC (Role-Based Access Control)                                      │
+│  - Encrypted Secrets Storage                                            │
+│  - Audit Logging                                                        │
+│  - Rate Limiting                                                        │
+│  - Firewall (UFW/firewalld)                                             │
+│  - Fail2ban                                                              │
+└─────────────────────────────────────────────────────────────────────────┘
+
+FLOW EXAMPLE: Creating a WordPress Site
+
+1. User → API Request → FastAPI Backend
+2. Backend validates permissions
+3. Backend creates site directory
+4. Backend creates MySQL database
+5. Backend generates wp-config.php
+6. Backend configures FrankenPHP worker
+7. Backend updates Caddy configuration
+8. Backend starts FrankenPHP worker
+9. Caddy reloads configuration
+10. Site is accessible via domain
