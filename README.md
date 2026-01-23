@@ -2,6 +2,8 @@
 
 A production-ready, open-source platform for managing multiple PHP sites (WordPress, Joomla, custom PHP) with FrankenPHP, MySQL/MariaDB, and Caddy reverse proxy.
 
+**Repository**: [https://github.com/frankenpanel/frankenpanel](https://github.com/frankenpanel/frankenpanel)
+
 ## Architecture Overview
 
 ```
@@ -70,8 +72,8 @@ A production-ready, open-source platform for managing multiple PHP sites (WordPr
 
 ```bash
 # Clone the repository
-git clone <repository-url>
-cd FrankenPanel
+git clone https://github.com/frankenpanel/frankenpanel.git
+cd frankenpanel
 
 # Run the installer
 sudo bash scripts/install.sh

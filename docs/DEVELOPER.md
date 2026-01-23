@@ -6,8 +6,8 @@
 
 1. **Clone Repository**
    ```bash
-   git clone <repository-url>
-   cd FrankenPanel
+   git clone https://github.com/frankenpanel/frankenpanel.git
+   cd frankenpanel
    ```
 
 2. **Setup Python Environment**
