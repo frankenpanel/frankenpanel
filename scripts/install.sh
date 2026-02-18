@@ -127,9 +127,11 @@ ensure_python() {
 install_packages() {
     if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ]; then
         apt-get update
-        # If using system python3, ensure venv and dev packages for it
+        # Ensure venv and dev packages for the Python version we use
         if [ "$PYTHON_CMD" = "python3" ]; then
             apt-get install -y python3-venv python3-dev
+        elif [ "$PYTHON_CMD" = "python3.12" ]; then
+            apt-get install -y python3.12-venv python3.12-dev
         fi
         apt-get install -y \
             postgresql postgresql-contrib \
