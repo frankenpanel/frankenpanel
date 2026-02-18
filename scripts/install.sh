@@ -17,6 +17,8 @@ FRANKENPANEL_ROOT="/opt/frankenpanel"
 FRANKENPANEL_USER="frankenpanel"
 FRANKENPANEL_GROUP="frankenpanel"
 PYTHON_MIN_VERSION="3.12"  # Minimum required Python version
+# Panel access port (override with FRANKENPANEL_PORT=8888 before running, or edit below)
+PANEL_PORT="${FRANKENPANEL_PORT:-8080}"
 
 echo -e "${GREEN}=== FrankenPanel Installation Script ===${NC}"
 
@@ -37,6 +39,7 @@ else
 fi
 
 echo -e "${GREEN}Detected OS: $OS $VER${NC}"
+echo -e "${GREEN}Panel will be accessible on port: $PANEL_PORT (override with FRANKENPANEL_PORT=8888)${NC}"
 
 # Resolve repo root early (before any 'cd' in the script) so path is correct
 SCRIPT_PATH="${BASH_SOURCE[0]}"
@@ -285,15 +288,15 @@ cat > /etc/caddy/Caddyfile <<EOF
 # FrankenPanel Caddyfile
 # Auto-generated - do not edit manually
 
-# Admin dashboard
+# Admin dashboard (by hostname)
 admin.frankenpanel.local {
     reverse_proxy 127.0.0.1:8000
     tls internal
 }
 
-# Default site
-:80 {
-    respond "FrankenPanel - Multi-Site Management System"
+# Panel on dedicated port - access via http://YOUR_IP:${PANEL_PORT}
+:${PANEL_PORT} {
+    reverse_proxy 127.0.0.1:8000
 }
 EOF
 
@@ -303,11 +306,13 @@ if command -v ufw &> /dev/null; then
     ufw allow 22/tcp
     ufw allow 80/tcp
     ufw allow 443/tcp
+    ufw allow "${PANEL_PORT}"/tcp
     ufw --force enable
 elif command -v firewall-cmd &> /dev/null; then
     firewall-cmd --permanent --add-service=ssh
     firewall-cmd --permanent --add-service=http
     firewall-cmd --permanent --add-service=https
+    firewall-cmd --permanent --add-port="${PANEL_PORT}/tcp"
     firewall-cmd --reload
 fi
 
@@ -378,7 +383,7 @@ echo -e "1. Database passwords have been generated and stored securely"
 echo -e "2. Passwords are stored in: $SECRETS_FILE (root access only)"
 echo -e "3. Passwords are also configured in: $FRANKENPANEL_ROOT/control-panel/backend/.env"
 echo -e "4. Configure your domain in /etc/caddy/Caddyfile"
-echo -e "5. Access admin dashboard at: http://admin.frankenpanel.local (or your configured domain)"
+echo -e "5. Access admin dashboard at: http://YOUR_IP:${PANEL_PORT} or http://admin.frankenpanel.local (if DNS/hosts set)"
 echo -e ""
 echo -e "${YELLOW}To view passwords (root only):${NC}"
 echo -e "  cat $SECRETS_FILE"
