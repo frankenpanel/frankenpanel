@@ -1,0 +1,57 @@
+# Build pre-built frontend tarball for installer (no Docker/Node on server).
+# Publishes to GitHub Release so installer can download without Docker.
+
+name: Build release tarball
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-tarball:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install and build frontend
+        run: |
+          cd frontend
+          npm install
+          npx tsc && npx vite build --outDir dist
+
+      - name: Create tarball
+        run: |
+          mkdir -p fp/control-panel/frontend
+          cp -r frontend/dist fp/control-panel/frontend/
+          tar czvf frankenpanel-install.tar.gz -C fp .
+
+      - name: Update install-latest tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -d install-latest 2>/dev/null || true
+          git push origin :refs/tags/install-latest 2>/dev/null || true
+          git tag install-latest ${{ github.sha }}
+          git push origin install-latest
+
+      - name: Create or update release and upload tarball
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: install-latest
+          name: Install (latest)
+          body: "Pre-built frontend for the installer. No Docker or Node required on the server."
+          files: frankenpanel-install.tar.gz
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

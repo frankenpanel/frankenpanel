@@ -19,8 +19,8 @@ FRANKENPANEL_GROUP="frankenpanel"
 PYTHON_MIN_VERSION="3.12"  # Minimum required Python version
 # Dashboard only on this port; API is internal (proxied behind Caddy on same port)
 PANEL_PORT="${FRANKENPANEL_PORT:-8090}"
-# Pre-built image from GitHub Actions (set to empty to skip and use repo frontend source only)
-FRANKENPANEL_IMAGE="${FRANKENPANEL_IMAGE:-ghcr.io/frankenpanel/frankenpanel:latest}"
+# Pre-built tarball from GitHub Actions (set to empty to skip download and use repo source)
+FRANKENPANEL_INSTALL_URL="${FRANKENPANEL_INSTALL_URL:-https://github.com/frankenpanel/frankenpanel/releases/download/install-latest/frankenpanel-install.tar.gz}"
 
 echo -e "${GREEN}=== FrankenPanel Installation Script ===${NC}"
 
@@ -255,24 +255,37 @@ fi
 echo -e "${YELLOW}Copying FrankenPanel backend to $FRANKENPANEL_ROOT/control-panel/backend...${NC}"
 cp -a "$REPO_ROOT/backend/." "$FRANKENPANEL_ROOT/control-panel/backend/"
 
-# Pre-built frontend: pull image and extract dist so no npm build on server
-FRONTEND_FROM_IMAGE=0
-if [ -n "$FRANKENPANEL_IMAGE" ] && command -v docker &>/dev/null; then
-    echo -e "${YELLOW}Pulling pre-built image and extracting frontend...${NC}"
-    if docker pull "$FRANKENPANEL_IMAGE" 2>/dev/null; then
-        CID=$(docker create "$FRANKENPANEL_IMAGE" 2>/dev/null) || true
-        if [ -n "$CID" ]; then
-            mkdir -p "$FRANKENPANEL_ROOT/control-panel/frontend/dist"
-            if docker cp "$CID:/app/control-panel/frontend/dist/." "$FRANKENPANEL_ROOT/control-panel/frontend/dist/" 2>/dev/null; then
-                FRONTEND_FROM_IMAGE=1
-                echo -e "${GREEN}Frontend copied from image (no build needed).${NC}"
+# Pre-built frontend: download tarball from GitHub Actions (no Docker or Node on server)
+FRONTEND_READY=0
+if [ -n "$FRANKENPANEL_INSTALL_URL" ]; then
+    echo -e "${YELLOW}Downloading pre-built frontend...${NC}"
+    TARBALL_TMP=$(mktemp -d)
+    if command -v curl &>/dev/null; then
+        if curl -sSLf -o "$TARBALL_TMP/fp.tar.gz" "$FRANKENPANEL_INSTALL_URL" 2>/dev/null; then
+            if tar -xzf "$TARBALL_TMP/fp.tar.gz" -C "$TARBALL_TMP" 2>/dev/null; then
+                mkdir -p "$FRANKENPANEL_ROOT/control-panel/frontend"
+                if [ -d "$TARBALL_TMP/control-panel/frontend/dist" ]; then
+                    cp -a "$TARBALL_TMP/control-panel/frontend/dist" "$FRANKENPANEL_ROOT/control-panel/frontend/"
+                    FRONTEND_READY=1
+                    echo -e "${GREEN}Frontend installed from tarball (no build needed).${NC}"
+                fi
             fi
-            docker rm "$CID" 2>/dev/null || true
+        fi
+    elif command -v wget &>/dev/null; then
+        if wget -q -O "$TARBALL_TMP/fp.tar.gz" "$FRANKENPANEL_INSTALL_URL" 2>/dev/null; then
+            if tar -xzf "$TARBALL_TMP/fp.tar.gz" -C "$TARBALL_TMP" 2>/dev/null; then
+                mkdir -p "$FRANKENPANEL_ROOT/control-panel/frontend"
+                if [ -d "$TARBALL_TMP/control-panel/frontend/dist" ]; then
+                    cp -a "$TARBALL_TMP/control-panel/frontend/dist" "$FRANKENPANEL_ROOT/control-panel/frontend/"
+                    FRONTEND_READY=1
+                    echo -e "${GREEN}Frontend installed from tarball (no build needed).${NC}"
+                fi
+            fi
         fi
     fi
+    rm -rf "$TARBALL_TMP"
 fi
-# Fallback: copy frontend source for manual build later
-if [ "$FRONTEND_FROM_IMAGE" -ne 1 ] && [ -d "$REPO_ROOT/frontend" ]; then
+if [ "$FRONTEND_READY" -ne 1 ] && [ -d "$REPO_ROOT/frontend" ]; then
     echo -e "${YELLOW}Copying frontend source (run 'npm run build' in frontend dir to build dashboard).${NC}"
     cp -a "$REPO_ROOT/frontend/." "$FRANKENPANEL_ROOT/control-panel/frontend/"
 fi
@@ -438,8 +451,8 @@ echo -e "3. Passwords are also configured in: $FRANKENPANEL_ROOT/control-panel/b
 echo -e "4. Access the dashboard (only port ${PANEL_PORT}; API is internal):"
 echo -e "   http://YOUR_SERVER_IP:${PANEL_PORT}"
 echo -e "   Open port ${PANEL_PORT} in your cloud provider's firewall if needed."
-if [ "$FRONTEND_FROM_IMAGE" = "1" ]; then
-    echo -e "   Dashboard UI was installed from the pre-built image (no npm build needed)."
+if [ "$FRONTEND_READY" = "1" ]; then
+    echo -e "   Dashboard UI was installed from pre-built tarball (no npm build needed)."
 else
     echo -e "   If the dashboard is blank, build the frontend: cd $FRANKENPANEL_ROOT/control-panel/frontend && npm install && npm run build"
 fi
