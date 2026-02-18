@@ -5,11 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi.security import HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from app.core.database import get_db
 from app.core.security import verify_password, create_access_token, create_refresh_token
 from app.core.middleware import get_current_user
 from app.core.audit import log_audit, AuditAction
-from app.models.user import User
+from app.models.user import User, Role
 from app.schemas.user import LoginRequest, TokenResponse, UserResponse
 from app.core.config import settings
 from datetime import timedelta
@@ -25,11 +26,15 @@ async def login(
     db: AsyncSession = Depends(get_db),
 ):
     """Login and get access token"""
-    # Find user
-    result = await db.execute(select(User).where(User.username == login_data.username))
+    # Find user; eager-load roles and permissions so UserResponse.model_validate doesn't lazy-load (500)
+    result = await db.execute(
+        select(User)
+        .where(User.username == login_data.username)
+        .options(selectinload(User.roles).selectinload(Role.permissions))
+    )
     user = result.scalar_one_or_none()
     
-    if not user or not verify_password(login_data.password, user.hashed_password):
+    if not user or not user.hashed_password or not verify_password(login_data.password, user.hashed_password):
         await log_audit(
             username=login_data.username,
             action=AuditAction.LOGIN,
@@ -56,16 +61,15 @@ async def login(
             detail="User account is inactive",
         )
     
+    # Build response while session is active (user.roles/permissions are loaded)
+    user_response = UserResponse.model_validate(user)
     # Update last login
     from sqlalchemy.sql import func
     user.last_login = func.now()
     await db.commit()
-    
     # Create tokens
     access_token = create_access_token(data={"sub": user.username})
     refresh_token = create_refresh_token(data={"sub": user.username})
-    
-    # Set session cookie
     response.set_cookie(
         key=settings.SESSION_COOKIE_NAME,
         value=access_token,
@@ -74,8 +78,6 @@ async def login(
         samesite=settings.SESSION_COOKIE_SAMESITE,
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
-    
-    # Log successful login
     await log_audit(
         user_id=user.id,
         username=user.username,
@@ -83,11 +85,10 @@ async def login(
         success=True,
         db=db,
     )
-    
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
-        user=UserResponse.model_validate(user),
+        user=user_response,
     )
 
 
