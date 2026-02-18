@@ -179,6 +179,8 @@ Then open `http://YOUR_SERVER_IP:8090` again. If still 502:
 - **Ensure PostgreSQL is running:** `sudo systemctl start postgresql` if needed.
 - **Restart backend:** `sudo systemctl restart frankenpanel-backend`, then try `http://YOUR_SERVER_IP:8090` again.
 
+**"Incorrect username or password" (admin / changeme):** The first admin user may not exist. On the server run: `cd /opt/frankenpanel/control-panel/backend && source venv/bin/activate && sudo -u frankenpanel bash scripts/create-admin.sh` (from repo). Then log in with **admin** / **changeme**.
+
 **Backend not starting / “permission denied for schema public”:**
 - Check logs: `sudo journalctl -u frankenpanel-backend -n 50`. If you see **permission denied for schema public** (PostgreSQL 15+), grant schema rights:
   ```bash
