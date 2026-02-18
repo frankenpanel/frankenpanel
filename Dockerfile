@@ -12,7 +12,8 @@ COPY frontend/package.json ./
 RUN npm install
 
 COPY frontend/ .
-RUN npm run build
+# Override vite outDir (repo uses ../backend/app/static for dev); we need dist for this image
+RUN npx tsc && npx vite build --outDir dist
 
 # -----------------------------------------------------------------------------
 # Stage 2: backend + built frontend
