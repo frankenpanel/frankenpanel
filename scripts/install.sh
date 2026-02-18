@@ -391,6 +391,34 @@ cd "$FRANKENPANEL_ROOT/control-panel/backend"
 source venv/bin/activate
 python -c "from app.core.database import init_db; import asyncio; asyncio.run(init_db())"
 
+# Create first admin user if none exists (so dashboard is ready to use)
+echo -e "${YELLOW}Creating first admin user (if needed)...${NC}"
+python -c "
+import asyncio
+from app.core.database import AsyncSessionLocal, init_db
+from app.models.user import User
+from app.core.security import get_password_hash
+
+async def main():
+    async with AsyncSessionLocal() as db:
+        from sqlalchemy import select
+        r = await db.execute(select(User).limit(1))
+        if r.scalar_one_or_none():
+            return
+        user = User(
+            username='admin',
+            email='admin@localhost',
+            full_name='Administrator',
+            hashed_password=get_password_hash('changeme'),
+            is_active=True,
+            is_superuser=True,
+        )
+        db.add(user)
+        await db.commit()
+
+asyncio.run(main())
+" 2>/dev/null || true
+
 # Start services
 echo -e "${YELLOW}Starting services...${NC}"
 systemctl daemon-reload
@@ -415,6 +443,7 @@ if [ "$FRONTEND_FROM_IMAGE" = "1" ]; then
 else
     echo -e "   If the dashboard is blank, build the frontend: cd $FRANKENPANEL_ROOT/control-panel/frontend && npm install && npm run build"
 fi
+echo -e "   Log in with username: admin, password: changeme — then change the password in the dashboard."
 echo -e ""
 echo -e "${YELLOW}To view passwords (root only):${NC}"
 echo -e "  cat $SECRETS_FILE"
