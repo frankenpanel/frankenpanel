@@ -1,16 +1,16 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { 
-  LayoutDashboard, 
-  Globe, 
-  Database, 
-  Link as LinkIcon, 
-  HardDrive, 
-  Users, 
+import {
+  LayoutDashboard,
+  Globe,
+  Database,
+  Link as LinkIcon,
+  HardDrive,
+  Users,
   FileText,
   LogOut,
   Menu,
-  X
+  X,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -29,59 +29,65 @@ export default function Layout() {
     { name: 'Audit Logs', href: '/audit', icon: FileText },
   ]
 
-  const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/')
+  const isActive = (path: string) =>
+    location.pathname === path || location.pathname.startsWith(path + '/')
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Mobile sidebar */}
-      <div className={`fixed inset-0 z-40 lg:hidden ${sidebarOpen ? '' : 'hidden'}`}>
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)}></div>
-        <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg">
-          <SidebarContent navigation={navigation} isActive={isActive} onClose={() => setSidebarOpen(false)} />
+    <div className="min-h-screen bg-stripe-bg">
+      {/* Mobile sidebar overlay */}
+      <div
+        className={`fixed inset-0 z-40 lg:hidden ${sidebarOpen ? '' : 'hidden'}`}
+        aria-hidden="true"
+      >
+        <div
+          className="fixed inset-0 bg-stripe-navy/60"
+          onClick={() => setSidebarOpen(false)}
+        />
+        <div className="fixed inset-y-0 left-0 w-72 max-w-[85vw] card-stripe border-0 shadow-stripe-lg">
+          <SidebarContent
+            navigation={navigation}
+            isActive={isActive}
+            onClose={() => setSidebarOpen(false)}
+          />
         </div>
       </div>
 
-      {/* Desktop sidebar */}
+      {/* Desktop sidebar - Stripe navy */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
-        <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
+        <div className="flex flex-1 flex-col bg-stripe-navy">
           <SidebarContent navigation={navigation} isActive={isActive} />
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="lg:pl-64 flex flex-col flex-1">
-        {/* Top bar */}
-        <div className="sticky top-0 z-10 flex-shrink-0 flex h-16 bg-white shadow">
+      <div className="lg:pl-64 flex flex-col min-h-screen">
+        {/* Top bar - white, subtle border */}
+        <header className="sticky top-0 z-30 flex h-14 flex-shrink-0 items-center border-b border-stripe-border bg-white px-4 sm:px-6">
           <button
             type="button"
-            className="px-4 border-r border-gray-200 text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 lg:hidden"
+            className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-stripe-primary/20 lg:hidden"
             onClick={() => setSidebarOpen(true)}
+            aria-label="Open menu"
           >
-            <Menu className="h-6 w-6" />
+            <Menu className="h-5 w-5" />
           </button>
-          <div className="flex-1 flex justify-between px-4">
-            <div className="flex-1 flex">
-              <h1 className="text-2xl font-semibold text-gray-900 self-center">FrankenPanel</h1>
-            </div>
-            <div className="ml-4 flex items-center md:ml-6">
-              <div className="flex items-center space-x-4">
-                <span className="text-sm text-gray-700">{user?.username}</span>
-                <button
-                  onClick={logout}
-                  className="p-2 text-gray-400 hover:text-gray-500"
-                  title="Logout"
-                >
-                  <LogOut className="h-5 w-5" />
-                </button>
-              </div>
+          <div className="flex flex-1 items-center justify-between pl-2">
+            <h1 className="text-lg font-semibold text-gray-900">FrankenPanel</h1>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-600">{user?.username}</span>
+              <button
+                onClick={logout}
+                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                title="Log out"
+              >
+                <LogOut className="h-5 w-5" />
+              </button>
             </div>
           </div>
-        </div>
+        </header>
 
-        {/* Page content */}
         <main className="flex-1">
           <div className="py-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               <Outlet />
             </div>
           </div>
@@ -91,53 +97,47 @@ export default function Layout() {
   )
 }
 
-function SidebarContent({ 
-  navigation, 
-  isActive, 
-  onClose 
-}: { 
-  navigation: Array<{ name: string; href: string; icon: any }>
+function SidebarContent({
+  navigation,
+  isActive,
+  onClose,
+}: {
+  navigation: Array<{ name: string; href: string; icon: React.ComponentType<{ className?: string }> }>
   isActive: (path: string) => boolean
   onClose?: () => void
 }) {
   const { user } = useAuth()
 
   return (
-    <div className="flex flex-col flex-grow pt-5 pb-4 overflow-y-auto">
-      <div className="flex items-center flex-shrink-0 px-4">
-        <h2 className="text-xl font-bold text-gray-900">FrankenPanel</h2>
+    <div className="flex flex-1 flex-col overflow-y-auto pt-5 pb-4">
+      <div className="flex flex-shrink-0 items-center justify-between px-4">
+        <span className="text-lg font-semibold text-white">FrankenPanel</span>
         {onClose && (
           <button
             onClick={onClose}
-            className="ml-auto p-2 text-gray-400 hover:text-gray-500"
+            className="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white"
+            aria-label="Close menu"
           >
-            <X className="h-6 w-6" />
+            <X className="h-5 w-5" />
           </button>
         )}
       </div>
-      <nav className="mt-5 flex-1 px-2 space-y-1">
+      <nav className="mt-6 flex-1 space-y-0.5 px-3">
         {navigation.map((item) => {
-          // Hide audit logs for non-superusers
-          if (item.href === '/audit' && !user?.is_superuser) {
-            return null
-          }
-          
+          if (item.href === '/audit' && !user?.is_superuser) return null
+          const active = isActive(item.href)
           return (
             <Link
               key={item.name}
               to={item.href}
               onClick={onClose}
-              className={`${
-                isActive(item.href)
-                  ? 'bg-indigo-50 text-indigo-600'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                active
+                  ? 'bg-white/15 text-white'
+                  : 'text-slate-400 hover:bg-white/10 hover:text-white'
+              }`}
             >
-              <item.icon
-                className={`${
-                  isActive(item.href) ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-500'
-                } mr-3 flex-shrink-0 h-6 w-6`}
-              />
+              <item.icon className="h-5 w-5 flex-shrink-0" />
               {item.name}
             </Link>
           )

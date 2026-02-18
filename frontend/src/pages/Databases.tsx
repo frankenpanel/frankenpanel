@@ -29,8 +29,8 @@ export default function Databases() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-stripe-border border-t-stripe-primary" />
       </div>
     )
   }
@@ -38,25 +38,25 @@ export default function Databases() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Databases</h1>
-        <p className="mt-2 text-sm text-gray-600">Manage MySQL/MariaDB databases</p>
+        <h1 className="text-2xl font-semibold text-gray-900">Databases</h1>
+        <p className="mt-1 text-sm text-gray-500">Manage MySQL/MariaDB databases</p>
       </div>
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <ul className="divide-y divide-gray-200">
+      <div className="card-stripe overflow-hidden">
+        <ul className="divide-y divide-stripe-border">
           {databases?.map((db) => (
             <li key={db.id}>
               <div className="px-4 py-4 sm:px-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <DatabaseIcon className="h-8 w-8 text-gray-400" />
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">{db.name}</div>
-                      <div className="mt-2 flex items-center text-sm text-gray-500">
-                        <span>{db.username}@{db.host}:{db.port}</span>
-                        <span className="mx-2">•</span>
-                        <span className="capitalize">{db.db_type}</span>
-                      </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-stripe-primary/10">
+                    <DatabaseIcon className="h-5 w-5 text-stripe-primary" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">{db.name}</div>
+                    <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
+                      <span>{db.username}@{db.host}:{db.port}</span>
+                      <span>·</span>
+                      <span className="capitalize">{db.db_type}</span>
                     </div>
                   </div>
                 </div>
@@ -65,8 +65,8 @@ export default function Databases() {
           ))}
         </ul>
         {databases?.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No databases found.</p>
+          <div className="py-12 text-center">
+            <p className="text-sm text-gray-500">No databases found.</p>
           </div>
         )}
       </div>

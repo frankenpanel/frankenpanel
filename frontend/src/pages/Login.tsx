@@ -14,37 +14,37 @@ export default function Login() {
     e.preventDefault()
     setError('')
     setLoading(true)
-
     try {
       await login(username, password)
       navigate('/dashboard')
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Login failed')
+    } catch (err: unknown) {
+      const detail = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : undefined
+      setError(detail || 'Login failed')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Sign in to FrankenPanel
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Multi-Site Management System
-          </p>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="text-sm text-red-800">{error}</div>
-            </div>
-          )}
-          <div className="rounded-md shadow-sm -space-y-px">
+    <div className="flex min-h-screen items-center justify-center bg-stripe-bg px-4 py-12">
+      <div className="w-full max-w-[400px]">
+        <div className="card-stripe p-8 shadow-stripe-lg">
+          <div className="mb-8">
+            <h1 className="text-2xl font-semibold text-gray-900">Sign in</h1>
+            <p className="mt-1.5 text-sm text-gray-500">
+              FrankenPanel · Multi-Site Management
+            </p>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                {error}
+              </div>
+            )}
             <div>
-              <label htmlFor="username" className="sr-only">
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1.5">
                 Username
               </label>
               <input
@@ -52,14 +52,15 @@ export default function Login() {
                 name="username"
                 type="text"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Username"
+                autoComplete="username"
+                className="input-stripe"
+                placeholder="Enter your username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
             </div>
             <div>
-              <label htmlFor="password" className="sr-only">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
                 Password
               </label>
               <input
@@ -67,24 +68,21 @@ export default function Login() {
                 name="password"
                 type="password"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
+                autoComplete="current-password"
+                className="input-stripe"
+                placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-          </div>
-
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-            >
-              {loading ? 'Signing in...' : 'Sign in'}
+            <button type="submit" disabled={loading} className="btn-primary w-full">
+              {loading ? 'Signing in…' : 'Sign in'}
             </button>
-          </div>
-        </form>
+          </form>
+        </div>
+        <p className="mt-6 text-center text-xs text-gray-500">
+          Default: admin / changeme — change after first login.
+        </p>
       </div>
     </div>
   )

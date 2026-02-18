@@ -23,8 +23,8 @@ export default function Users() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-stripe-border border-t-stripe-primary" />
       </div>
     )
   }
@@ -32,59 +32,53 @@ export default function Users() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Users</h1>
-        <p className="mt-2 text-sm text-gray-600">Manage user accounts and permissions</p>
+        <h1 className="text-2xl font-semibold text-gray-900">Users</h1>
+        <p className="mt-1 text-sm text-gray-500">Manage user accounts and permissions</p>
       </div>
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <ul className="divide-y divide-gray-200">
+      <div className="card-stripe overflow-hidden">
+        <ul className="divide-y divide-stripe-border">
           {users?.map((user) => (
             <li key={user.id}>
               <div className="px-4 py-4 sm:px-6">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                        <UsersIcon className="h-6 w-6 text-indigo-600" />
-                      </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-stripe-primary/10">
+                      <UsersIcon className="h-5 w-5 text-stripe-primary" />
                     </div>
-                    <div className="ml-4">
-                      <div className="flex items-center">
-                        <div className="text-sm font-medium text-gray-900">{user.username}</div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-900">{user.username}</span>
                         {user.is_superuser && (
-                          <span title="Superuser"><Shield className="h-4 w-4 ml-2 text-yellow-500" /></span>
+                          <Shield className="h-4 w-4 text-amber-500" title="Superuser" />
                         )}
                       </div>
-                      <div className="mt-2 flex items-center text-sm text-gray-500">
+                      <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
                         <span>{user.email}</span>
                         {user.full_name && (
                           <>
-                            <span className="mx-2">•</span>
+                            <span>·</span>
                             <span>{user.full_name}</span>
                           </>
                         )}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        user.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {user.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
+                  <span
+                    className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+                      user.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'
+                    }`}
+                  >
+                    {user.is_active ? 'Active' : 'Inactive'}
+                  </span>
                 </div>
               </div>
             </li>
           ))}
         </ul>
         {users?.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No users found.</p>
+          <div className="py-12 text-center">
+            <p className="text-sm text-gray-500">No users found.</p>
           </div>
         )}
       </div>

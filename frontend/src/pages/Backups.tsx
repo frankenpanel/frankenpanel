@@ -43,73 +43,72 @@ export default function Backups() {
     const k = 1024
     const sizes = ['Bytes', 'KB', 'MB', 'GB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
   }
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-stripe-border border-t-stripe-primary" />
       </div>
     )
   }
 
   return (
     <div>
-      <div className="mb-8 flex justify-between items-center">
+      <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Backups</h1>
-          <p className="mt-2 text-sm text-gray-600">Manage site and database backups</p>
+          <h1 className="text-2xl font-semibold text-gray-900">Backups</h1>
+          <p className="mt-1 text-sm text-gray-500">Manage site and database backups</p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Create Backup
+        <button onClick={() => setShowCreateModal(true)} className="btn-primary">
+          <Plus className="mr-2 h-5 w-5" />
+          Create backup
         </button>
       </div>
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <ul className="divide-y divide-gray-200">
+      <div className="card-stripe overflow-hidden">
+        <ul className="divide-y divide-stripe-border">
           {backups?.map((backup) => (
             <li key={backup.id}>
               <div className="px-4 py-4 sm:px-6">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <HardDrive className="h-8 w-8 text-gray-400" />
-                    <div className="ml-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-stripe-primary/10">
+                      <HardDrive className="h-5 w-5 text-stripe-primary" />
+                    </div>
+                    <div>
                       <div className="text-sm font-medium text-gray-900">
-                        Backup #{backup.id} - {backup.backup_type}
+                        Backup #{backup.id} · {backup.backup_type}
                       </div>
-                      <div className="mt-2 flex items-center text-sm text-gray-500">
+                      <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
                         <span>{formatFileSize(backup.file_size || 0)}</span>
                         {backup.encrypted && (
                           <>
-                            <span className="mx-2">•</span>
+                            <span>·</span>
                             <span>Encrypted</span>
                           </>
                         )}
-                        <span className="mx-2">•</span>
+                        <span>·</span>
                         <span>{new Date(backup.created_at).toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2">
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
                         backup.status === 'completed'
-                          ? 'bg-green-100 text-green-800'
+                          ? 'bg-emerald-50 text-emerald-700'
                           : backup.status === 'failed'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-yellow-100 text-yellow-800'
+                            ? 'bg-red-50 text-red-700'
+                            : 'bg-amber-50 text-amber-700'
                       }`}
                     >
                       {backup.status}
                     </span>
                     {backup.status === 'completed' && (
                       <button
-                        className="text-indigo-400 hover:text-indigo-600"
+                        className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
                         title="Restore"
                       >
                         <RotateCcw className="h-5 w-5" />
@@ -121,7 +120,7 @@ export default function Backups() {
                           deleteMutation.mutate(backup.id)
                         }
                       }}
-                      className="text-red-400 hover:text-red-600"
+                      className="rounded-lg p-2 text-red-500 hover:bg-red-50 hover:text-red-700"
                       title="Delete"
                     >
                       <Trash2 className="h-5 w-5" />
@@ -133,8 +132,8 @@ export default function Backups() {
           ))}
         </ul>
         {backups?.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No backups found. Create a backup to get started.</p>
+          <div className="py-12 text-center">
+            <p className="text-sm text-gray-500">No backups found. Create a backup to get started.</p>
           </div>
         )}
       </div>
@@ -164,7 +163,7 @@ function CreateBackupModal({
   const queryClient = useQueryClient()
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => api.post('/backups/', data),
+    mutationFn: (data: Record<string, unknown>) => api.post('/backups/', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['backups'] })
       onClose()
@@ -177,57 +176,49 @@ function CreateBackupModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Create Backup</h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-20">
+      <div className="card-stripe w-full max-w-md p-6 shadow-stripe-lg">
+        <h3 className="text-lg font-semibold text-gray-900">Create backup</h3>
+        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           {!siteId && (
             <div>
-              <label className="block text-sm font-medium text-gray-700">Site ID</label>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">Site ID</label>
               <input
                 type="number"
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="input-stripe"
                 value={formData.site_id}
-                onChange={(e) => setFormData({ ...formData, site_id: parseInt(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, site_id: parseInt(e.target.value) || '' })}
               />
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-gray-700">Backup Type</label>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Backup type</label>
             <select
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="input-stripe"
               value={formData.backup_type}
               onChange={(e) => setFormData({ ...formData, backup_type: e.target.value })}
             >
               <option value="full">Full (Site + Database)</option>
-              <option value="site_only">Site Only</option>
-              <option value="database_only">Database Only</option>
+              <option value="site_only">Site only</option>
+              <option value="database_only">Database only</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Description</label>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Description</label>
             <textarea
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="input-stripe min-h-[80px] resize-y"
               rows={3}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
           </div>
-          <div className="flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={onClose} className="btn-secondary">
               Cancel
             </button>
-            <button
-              type="submit"
-              disabled={createMutation.isPending}
-              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-            >
-              {createMutation.isPending ? 'Creating...' : 'Create'}
+            <button type="submit" disabled={createMutation.isPending} className="btn-primary">
+              {createMutation.isPending ? 'Creating…' : 'Create'}
             </button>
           </div>
         </form>

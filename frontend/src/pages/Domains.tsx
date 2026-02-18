@@ -38,55 +38,52 @@ export default function Domains() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-stripe-border border-t-stripe-primary" />
       </div>
     )
   }
 
   return (
     <div>
-      <div className="mb-8 flex justify-between items-center">
+      <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Domains</h1>
-          <p className="mt-2 text-sm text-gray-600">Manage domain mappings</p>
+          <h1 className="text-2xl font-semibold text-gray-900">Domains</h1>
+          <p className="mt-1 text-sm text-gray-500">Manage domain mappings</p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Add Domain
+        <button onClick={() => setShowCreateModal(true)} className="btn-primary">
+          <Plus className="mr-2 h-5 w-5" />
+          Add domain
         </button>
       </div>
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <ul className="divide-y divide-gray-200">
+      <div className="card-stripe overflow-hidden">
+        <ul className="divide-y divide-stripe-border">
           {domains?.map((domain) => (
             <li key={domain.id}>
               <div className="px-4 py-4 sm:px-6">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <Globe className="h-8 w-8 text-gray-400" />
-                    <div className="ml-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-stripe-primary/10">
+                      <Globe className="h-5 w-5 text-stripe-primary" />
+                    </div>
+                    <div>
                       <div className="text-sm font-medium text-gray-900">{domain.domain}</div>
-                      <div className="mt-2 flex items-center text-sm text-gray-500">
+                      <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
                         <span className="capitalize">{domain.domain_type}</span>
                         {domain.ssl_enabled && (
                           <>
-                            <span className="mx-2">•</span>
-                            <span className="text-green-600">SSL Enabled</span>
+                            <span>·</span>
+                            <span className="text-emerald-600">SSL enabled</span>
                           </>
                         )}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2">
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        domain.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
+                      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+                        domain.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'
                       }`}
                     >
                       {domain.is_active ? 'Active' : 'Inactive'}
@@ -97,7 +94,7 @@ export default function Domains() {
                           deleteMutation.mutate(domain.id)
                         }
                       }}
-                      className="text-red-400 hover:text-red-600"
+                      className="rounded-lg p-2 text-red-500 hover:bg-red-50 hover:text-red-700"
                       title="Delete"
                     >
                       <Trash2 className="h-5 w-5" />
@@ -109,8 +106,8 @@ export default function Domains() {
           ))}
         </ul>
         {domains?.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No domains found. Add a domain to get started.</p>
+          <div className="py-12 text-center">
+            <p className="text-sm text-gray-500">No domains found. Add a domain to get started.</p>
           </div>
         )}
       </div>
@@ -141,7 +138,7 @@ function CreateDomainModal({
   const queryClient = useQueryClient()
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => api.post('/domains/', data),
+    mutationFn: (data: Record<string, unknown>) => api.post('/domains/', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['domains'] })
       onClose()
@@ -154,37 +151,37 @@ function CreateDomainModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Add Domain</h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-20">
+      <div className="card-stripe w-full max-w-md p-6 shadow-stripe-lg">
+        <h3 className="text-lg font-semibold text-gray-900">Add domain</h3>
+        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Domain</label>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Domain</label>
             <input
               type="text"
               required
               placeholder="example.com"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="input-stripe"
               value={formData.domain}
               onChange={(e) => setFormData({ ...formData, domain: e.target.value })}
             />
           </div>
           {!siteId && (
             <div>
-              <label className="block text-sm font-medium text-gray-700">Site ID</label>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">Site ID</label>
               <input
                 type="number"
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="input-stripe"
                 value={formData.site_id}
-                onChange={(e) => setFormData({ ...formData, site_id: parseInt(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, site_id: parseInt(e.target.value) || '' })}
               />
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-gray-700">Domain Type</label>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Domain type</label>
             <select
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="input-stripe"
               value={formData.domain_type}
               onChange={(e) => setFormData({ ...formData, domain_type: e.target.value })}
             >
@@ -193,29 +190,21 @@ function CreateDomainModal({
               <option value="subdomain">Subdomain</option>
             </select>
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center gap-2">
             <input
               type="checkbox"
               checked={formData.ssl_enabled}
               onChange={(e) => setFormData({ ...formData, ssl_enabled: e.target.checked })}
-              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              className="h-4 w-4 rounded border-stripe-border text-stripe-primary focus:ring-stripe-primary"
             />
-            <label className="ml-2 block text-sm text-gray-900">Enable SSL</label>
+            <label className="text-sm text-gray-700">Enable SSL</label>
           </div>
-          <div className="flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={onClose} className="btn-secondary">
               Cancel
             </button>
-            <button
-              type="submit"
-              disabled={createMutation.isPending}
-              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-            >
-              {createMutation.isPending ? 'Adding...' : 'Add'}
+            <button type="submit" disabled={createMutation.isPending} className="btn-primary">
+              {createMutation.isPending ? 'Adding…' : 'Add'}
             </button>
           </div>
         </form>

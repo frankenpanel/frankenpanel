@@ -24,8 +24,8 @@ export default function AuditLogs() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-stripe-border border-t-stripe-primary" />
       </div>
     )
   }
@@ -33,55 +33,53 @@ export default function AuditLogs() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Audit Logs</h1>
-        <p className="mt-2 text-sm text-gray-600">System activity and security logs</p>
+        <h1 className="text-2xl font-semibold text-gray-900">Audit logs</h1>
+        <p className="mt-1 text-sm text-gray-500">System activity and security logs</p>
       </div>
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <ul className="divide-y divide-gray-200">
+      <div className="card-stripe overflow-hidden">
+        <ul className="divide-y divide-stripe-border">
           {logs?.map((log) => (
             <li key={log.id}>
               <div className="px-4 py-4 sm:px-6">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <FileText className="h-6 w-6 text-gray-400" />
-                    <div className="ml-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100">
+                      <FileText className="h-5 w-5 text-gray-500" />
+                    </div>
+                    <div>
                       <div className="text-sm font-medium text-gray-900">
                         {log.action.toUpperCase()} {log.resource_type || ''}
-                        {log.resource_id && ` #${log.resource_id}`}
+                        {log.resource_id != null && ` #${log.resource_id}`}
                       </div>
-                      <div className="mt-2 flex items-center text-sm text-gray-500">
+                      <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
                         <span>{log.username || 'System'}</span>
                         {log.ip_address && (
                           <>
-                            <span className="mx-2">•</span>
+                            <span>·</span>
                             <span>{log.ip_address}</span>
                           </>
                         )}
-                        <span className="mx-2">•</span>
+                        <span>·</span>
                         <span>{new Date(log.created_at).toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
-                  <div>
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        log.success
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {log.success ? 'Success' : 'Failed'}
-                    </span>
-                  </div>
+                  <span
+                    className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+                      log.success ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
+                    }`}
+                  >
+                    {log.success ? 'Success' : 'Failed'}
+                  </span>
                 </div>
               </div>
             </li>
           ))}
         </ul>
         {logs?.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No audit logs found.</p>
+          <div className="py-12 text-center">
+            <p className="text-sm text-gray-500">No audit logs found.</p>
           </div>
         )}
       </div>

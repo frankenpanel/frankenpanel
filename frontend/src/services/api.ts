@@ -10,6 +10,12 @@ const api = axios.create({
   },
 })
 
+let onUnauthorized: (() => void) | null = null
+
+export function setOnUnauthorized(callback: () => void) {
+  onUnauthorized = callback
+}
+
 // Request interceptor to add auth token
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token')
@@ -19,13 +25,17 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Response interceptor for error handling
+// Response interceptor: 401 → clear token and SPA redirect (no full page reload)
+// Skip redirect for /auth/login so the login page can show "Incorrect username or password"
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      const isLoginRequest = error.config?.url?.includes('/auth/login')
       localStorage.removeItem('access_token')
-      window.location.href = '/login'
+      if (!isLoginRequest && onUnauthorized) {
+        onUnauthorized()
+      }
     }
     return Promise.reject(error)
   }

@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import api from '../services/api'
+import api, { setOnUnauthorized } from '../services/api'
 
 interface User {
   id: number
@@ -29,6 +29,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     checkAuth()
   }, [])
+
+  useEffect(() => {
+    setOnUnauthorized(() => {
+      setUser(null)
+      navigate('/login')
+    })
+  }, [navigate])
 
   const checkAuth = async () => {
     try {
