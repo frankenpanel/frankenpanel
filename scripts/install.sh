@@ -222,6 +222,26 @@ if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ]; then
     apt-get install -y caddy
 fi
 
+# Copy FrankenPanel backend from repo to installation directory
+# (Script must be run from the cloned repo: e.g. ./scripts/install.sh from repo root)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+if [ ! -f "$REPO_ROOT/backend/requirements.txt" ]; then
+    echo -e "${RED}Error: Could not find backend/requirements.txt.${NC}"
+    echo -e "Please run this script from the FrankenPanel repository root:"
+    echo -e "  git clone https://github.com/frankenpanel/frankenpanel.git"
+    echo -e "  cd frankenpanel"
+    echo -e "  sudo bash scripts/install.sh"
+    exit 1
+fi
+echo -e "${YELLOW}Copying FrankenPanel backend to $FRANKENPANEL_ROOT/control-panel/backend...${NC}"
+cp -a "$REPO_ROOT/backend/." "$FRANKENPANEL_ROOT/control-panel/backend/"
+# Copy frontend source for later build (optional)
+if [ -d "$REPO_ROOT/frontend" ]; then
+    echo -e "${YELLOW}Copying frontend source...${NC}"
+    cp -a "$REPO_ROOT/frontend/." "$FRANKENPANEL_ROOT/control-panel/frontend/"
+fi
+
 # Setup Python virtual environment
 echo -e "${YELLOW}Setting up Python environment...${NC}"
 cd "$FRANKENPANEL_ROOT/control-panel/backend"
@@ -323,6 +343,10 @@ EOF
 
 chown "$FRANKENPANEL_USER:$FRANKENPANEL_GROUP" "$FRANKENPANEL_ROOT/control-panel/backend/.env"
 chmod 600 "$FRANKENPANEL_ROOT/control-panel/backend/.env"
+
+# Ensure backend and venv are owned by frankenpanel user (for systemd service)
+chown -R "$FRANKENPANEL_USER:$FRANKENPANEL_GROUP" "$FRANKENPANEL_ROOT/control-panel/backend"
+[ -d "$FRANKENPANEL_ROOT/control-panel/frontend" ] && chown -R "$FRANKENPANEL_USER:$FRANKENPANEL_GROUP" "$FRANKENPANEL_ROOT/control-panel/frontend"
 
 # Initialize database
 echo -e "${YELLOW}Initializing database...${NC}"
