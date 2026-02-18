@@ -53,18 +53,19 @@ async def health_check():
 
 
 # Serve frontend or fallback so "/" never returns 404
+# Vite default build outputs dist/index.html + dist/assets/ (not dist/static/); only mount /static if it exists
 frontend_dir = os.path.join(settings.FRANKENPANEL_ROOT, "control-panel", "frontend", "dist")
 if os.path.exists(frontend_dir):
-    app.mount("/static", StaticFiles(directory=os.path.join(frontend_dir, "static")), name="static")
+    static_subdir = os.path.join(frontend_dir, "static")
+    if os.path.isdir(static_subdir):
+        app.mount("/static", StaticFiles(directory=static_subdir), name="static")
 
 _FALLBACK_HTML = """<!DOCTYPE html>
 <html><head><title>FrankenPanel</title></head>
 <body style="font-family:sans-serif;max-width:600px;margin:2em auto;padding:1em;">
   <h1>FrankenPanel</h1>
   <p>Dashboard UI is not built yet. Build the frontend on the server:</p>
-  <pre style="background:#f4f4f4;padding:1em;overflow:auto;">cd /opt/frankenpanel/control-panel/frontend
-npm install
-npm run build</pre>
+
   <p>Then restart: <code>sudo systemctl restart frankenpanel-backend</code></p>
   <p><a href="/health">/health</a></p>
 </body></html>"""

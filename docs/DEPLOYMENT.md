@@ -166,7 +166,14 @@ sudo journalctl -u caddy -f
 - Ensure the backend is running and the frontend is built: `cd /opt/frankenpanel/control-panel/frontend && npm run build`, then `sudo systemctl restart frankenpanel-backend`.
 
 **HTTP 502 Bad Gateway on port 8090:**
-- Caddy is running but the backend is not responding. Fix the backend first.
+
+Caddy is running but the **backend** (FastAPI on 127.0.0.1:8000) is not responding. First try:
+
+```bash
+sudo systemctl restart frankenpanel-backend
+```
+
+Then open `http://YOUR_SERVER_IP:8090` again. If still 502:
 - **Check backend status:** `sudo systemctl status frankenpanel-backend`. If **inactive** or **failed**, the backend is not running.
 - **Check backend logs:** `sudo journalctl -u frankenpanel-backend -n 80 --no-pager`. Look for Python tracebacks, “password authentication failed” (PostgreSQL), or missing .env/path.
 - **Ensure PostgreSQL is running:** `sudo systemctl start postgresql` if needed.
