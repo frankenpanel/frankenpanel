@@ -4,9 +4,11 @@ Middleware: authentication, logging, security
 from fastapi import Request, HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from app.core.database import get_db
 from app.core.security import decode_token
-from app.models.user import User
+from app.models.user import User, Role
+from app.models.audit import AuditAction
 from app.core.audit import log_audit
 from typing import Callable
 import time
@@ -61,9 +63,13 @@ async def get_current_user(
             detail="Invalid authentication credentials",
         )
     
-    # Get user from database
+    # Get user from database; eager-load roles and permissions to avoid async lazy-load errors
     from sqlalchemy import select
-    result = await db.execute(select(User).where(User.username == username))
+    result = await db.execute(
+        select(User)
+        .where(User.username == username)
+        .options(selectinload(User.roles).selectinload(Role.permissions))
+    )
     user = result.scalar_one_or_none()
     
     if user is None or not user.is_active:
@@ -133,7 +139,7 @@ class AuditMiddleware:
             user = await get_current_user(request)
             await log_audit(
                 user_id=user.id,
-                action="read",  # Default, will be overridden by specific endpoints
+                action=AuditAction.READ,
                 resource_type="api",
                 request_path=request.url.path,
                 request_method=request.method,
