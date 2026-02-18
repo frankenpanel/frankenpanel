@@ -274,6 +274,7 @@ User=$FRANKENPANEL_USER
 Group=$FRANKENPANEL_GROUP
 WorkingDirectory=$FRANKENPANEL_ROOT/control-panel/backend
 Environment="PATH=$FRANKENPANEL_ROOT/control-panel/backend/venv/bin"
+EnvironmentFile=-$FRANKENPANEL_ROOT/control-panel/backend/.env
 ExecStart=$FRANKENPANEL_ROOT/control-panel/backend/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
 Restart=always
 RestartSec=10

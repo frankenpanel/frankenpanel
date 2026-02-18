@@ -113,6 +113,14 @@ sudo journalctl -u caddy -f
 - Ensure the frontend is built so the panel UI is served: `cd /opt/frankenpanel/control-panel/frontend && npm run build`.
 - For “other ports not working”: open the panel port (e.g. 8080) in the **cloud** firewall as well as UFW; try `http://YOUR_SERVER_IP` (port 80) and `http://YOUR_SERVER_IP:8080` after opening both.
 
+**HTTP 502 Bad Gateway (e.g. on port 80 or 8080):**
+- Caddy is running but the backend is not responding. Fix the backend first.
+- **Check backend status:** `sudo systemctl status frankenpanel-backend`. If it is **inactive** or **failed**, the backend is not running.
+- **Check backend logs:** `sudo journalctl -u frankenpanel-backend -n 80 --no-pager`. Look for Python tracebacks, “password authentication failed” (PostgreSQL), “Connection refused” (database), or “No such file” (missing .env or path).
+- **Ensure PostgreSQL is running:** `sudo systemctl status postgresql` and start it if needed: `sudo systemctl start postgresql`.
+- **Ensure .env exists and is readable:** `sudo ls -la /opt/frankenpanel/control-panel/backend/.env`. The service user must be able to read it (install script sets ownership).
+- **Restart backend after fixing:** `sudo systemctl restart frankenpanel-backend`, then try the panel again (e.g. `http://YOUR_SERVER_IP` or `http://YOUR_SERVER_IP:8080`).
+
 **Backend not starting:**
 - Check logs: `sudo journalctl -u frankenpanel-backend -n 50`
 - Verify database connection
