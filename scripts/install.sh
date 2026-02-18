@@ -16,7 +16,7 @@ NC='\033[0m' # No Color
 FRANKENPANEL_ROOT="/opt/frankenpanel"
 FRANKENPANEL_USER="frankenpanel"
 FRANKENPANEL_GROUP="frankenpanel"
-PYTHON_VERSION="3.12"
+PYTHON_MIN_VERSION="3.12"  # Minimum required Python version
 
 echo -e "${GREEN}=== FrankenPanel Installation Script ===${NC}"
 
@@ -56,12 +56,74 @@ SECRETS_EOF
 chmod 600 "$SECRETS_FILE"
 echo -e "${GREEN}Passwords stored securely in $SECRETS_FILE${NC}"
 
-# Function to install packages
+# Detect or install Python 3.12+
+# Sets PYTHON_CMD (e.g. python3.12 or python3) for use in venv and scripts
+ensure_python() {
+    echo -e "${YELLOW}Checking for Python ${PYTHON_MIN_VERSION}+...${NC}"
+    
+    # Prefer python3.12 if available
+    if command -v python3.12 &>/dev/null; then
+        PYTHON_CMD="python3.12"
+        echo -e "${GREEN}Using existing $(python3.12 --version)${NC}"
+        return
+    fi
+    
+    # Check default python3 version (e.g. Ubuntu 25.04 has 3.13)
+    if command -v python3 &>/dev/null; then
+        local ver
+        ver=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "0")
+        local major minor
+        major=$(echo "$ver" | cut -d. -f1)
+        minor=$(echo "$ver" | cut -d. -f2)
+        if [ "$major" -ge 3 ] && [ "$minor" -ge 12 ] 2>/dev/null; then
+            PYTHON_CMD="python3"
+            echo -e "${GREEN}Using system $(python3 --version)${NC}"
+            return
+        fi
+    fi
+    
+    # On Ubuntu/Debian, install Python 3.12 from deadsnakes PPA
+    if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ]; then
+        echo -e "${YELLOW}Adding deadsnakes PPA for Python 3.12...${NC}"
+        apt-get update
+        apt-get install -y software-properties-common
+        add-apt-repository -y ppa:deadsnakes/ppa
+        apt-get update
+        apt-get install -y python3.12 python3.12-venv python3.12-dev
+        PYTHON_CMD="python3.12"
+        echo -e "${GREEN}Installed $(python3.12 --version)${NC}"
+        return
+    fi
+    
+    # CentOS/RHEL: try dnf module or SCL
+    if [ "$OS" = "centos" ] || [ "$OS" = "rhel" ]; then
+        if command -v python3.12 &>/dev/null; then
+            PYTHON_CMD="python3.12"
+            return
+        fi
+        echo -e "${YELLOW}Installing Python 3.12...${NC}"
+        yum install -y python3.12 python3.12-devel 2>/dev/null || \
+        dnf install -y python3.12 python3.12-devel 2>/dev/null || {
+            echo -e "${RED}Could not install Python 3.12. Please install it manually.${NC}"
+            exit 1
+        }
+        PYTHON_CMD="python3.12"
+        return
+    fi
+    
+    echo -e "${RED}Python ${PYTHON_MIN_VERSION}+ is required but could not be detected or installed.${NC}"
+    exit 1
+}
+
+# Function to install packages (Python is installed by ensure_python)
 install_packages() {
     if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ]; then
         apt-get update
+        # If using system python3, ensure venv and dev packages for it
+        if [ "$PYTHON_CMD" = "python3" ]; then
+            apt-get install -y python3-venv python3-dev
+        fi
         apt-get install -y \
-            python3.12 python3.12-venv python3.12-dev \
             postgresql postgresql-contrib \
             mysql-server \
             curl wget git build-essential \
@@ -69,7 +131,6 @@ install_packages() {
             certbot
     elif [ "$OS" = "centos" ] || [ "$OS" = "rhel" ]; then
         yum install -y \
-            python3.12 python3.12-devel \
             postgresql postgresql-server \
             mariadb-server \
             curl wget git gcc make \
@@ -80,6 +141,9 @@ install_packages() {
         exit 1
     fi
 }
+
+# Ensure Python 3.12+ is available (detect system or install from PPA)
+ensure_python
 
 # Install system packages
 echo -e "${YELLOW}Installing system packages...${NC}"
@@ -161,7 +225,7 @@ fi
 # Setup Python virtual environment
 echo -e "${YELLOW}Setting up Python environment...${NC}"
 cd "$FRANKENPANEL_ROOT/control-panel/backend"
-python3.12 -m venv venv
+$PYTHON_CMD -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
