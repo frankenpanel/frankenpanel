@@ -294,7 +294,12 @@ admin.frankenpanel.local {
     tls internal
 }
 
-# Panel on dedicated port - access via http://YOUR_IP:${PANEL_PORT}
+# Panel on port 80 - use http://YOUR_IP (works on most clouds without opening extra ports)
+:80 {
+    reverse_proxy 127.0.0.1:8000
+}
+
+# Panel on optional port - http://YOUR_IP:${PANEL_PORT} (open this port in cloud firewall if needed)
 :${PANEL_PORT} {
     reverse_proxy 127.0.0.1:8000
 }
@@ -383,7 +388,12 @@ echo -e "1. Database passwords have been generated and stored securely"
 echo -e "2. Passwords are stored in: $SECRETS_FILE (root access only)"
 echo -e "3. Passwords are also configured in: $FRANKENPANEL_ROOT/control-panel/backend/.env"
 echo -e "4. Configure your domain in /etc/caddy/Caddyfile"
-echo -e "5. Access admin dashboard at: http://YOUR_IP:${PANEL_PORT} or http://admin.frankenpanel.local (if DNS/hosts set)"
+echo -e "5. Access admin dashboard:"
+echo -e "   - http://YOUR_SERVER_IP          (port 80, try this first)"
+echo -e "   - http://YOUR_SERVER_IP:${PANEL_PORT}  (port ${PANEL_PORT}; if using a cloud VPS, open this port in the cloud firewall)"
+echo -e "   - http://admin.frankenpanel.local (if DNS/hosts set)"
+echo -e ""
+echo -e "${YELLOW}If the panel does not load: open port 80 (and ${PANEL_PORT} if used) in your cloud provider's firewall (DigitalOcean/AWS/Linode etc.).${NC}"
 echo -e ""
 echo -e "${YELLOW}To view passwords (root only):${NC}"
 echo -e "  cat $SECRETS_FILE"

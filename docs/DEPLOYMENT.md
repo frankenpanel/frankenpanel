@@ -100,6 +100,13 @@ sudo journalctl -u caddy -f
 
 ### Troubleshooting
 
+**Panel not accessible (browser loads forever or connection timeout):**
+- **Use port 80 first:** Open `http://YOUR_SERVER_IP` (no port = 80). Most cloud providers allow port 80 by default.
+- **Cloud firewall:** On DigitalOcean, AWS, Linode, etc., open the panel port in the cloud console (Networking → Firewall / Security Groups). Add TCP port 80 and, if you use it, 8080 (or your `FRANKENPANEL_PORT`).
+- **Local firewall:** Ensure UFW allows the port: `sudo ufw allow 80/tcp` and `sudo ufw reload` (and same for 8080 if used). Check: `sudo ufw status`.
+- **Caddy listening:** On the server run `ss -tlnp | grep -E '80|8080'` to confirm Caddy is bound to the port.
+- **Backend up:** `sudo systemctl status frankenpanel-backend` and `sudo systemctl status caddy` must be active.
+
 **Backend not starting:**
 - Check logs: `sudo journalctl -u frankenpanel-backend -n 50`
 - Verify database connection
