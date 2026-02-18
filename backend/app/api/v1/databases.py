@@ -7,7 +7,8 @@ from typing import List
 from app.core.database import get_db
 from app.core.middleware import get_current_user
 from app.core.audit import log_audit, AuditAction
-from app.core.permissions import Resource, Action, require_permission
+from app.core.permissions import Resource, Action
+from app.core.middleware import require_permission
 from app.models.user import User
 from app.schemas.database import DatabaseCreate, DatabaseUpdate, DatabaseResponse
 from app.services.database_service import DatabaseService

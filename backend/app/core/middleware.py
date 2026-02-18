@@ -75,6 +75,11 @@ async def get_current_user(
     return user
 
 
+def _perm_str(v):
+    """Normalize resource/action to string for DB comparison (accepts enum or str)."""
+    return v.value if hasattr(v, "value") else v
+
+
 async def require_permission(
     resource: str,
     action: str,
@@ -82,7 +87,7 @@ async def require_permission(
     request: Request = None,
     db: AsyncSession = None
 ) -> bool:
-    """Check if user has required permission"""
+    """Check if user has required permission. resource/action can be Resource/Action enums or strings."""
     if not user:
         if request:
             user = await get_current_user(request)
@@ -99,10 +104,12 @@ async def require_permission(
             db = session
             break
     
+    res_str = _perm_str(resource)
+    act_str = _perm_str(action)
     # Get all permissions for user's roles
     for role in user.roles:
         for permission in role.permissions:
-            if permission.resource == resource and permission.action == action:
+            if permission.resource == res_str and permission.action == act_str:
                 return True
     
     return False
