@@ -50,7 +50,9 @@ export default function Users() {
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-gray-900">{user.username}</span>
                         {user.is_superuser && (
-                          <Shield className="h-4 w-4 text-amber-500" title="Superuser" />
+                          <span title="Superuser">
+                            <Shield className="h-4 w-4 text-amber-500" />
+                          </span>
                         )}
                       </div>
                       <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
