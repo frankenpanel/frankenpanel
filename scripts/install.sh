@@ -17,8 +17,8 @@ FRANKENPANEL_ROOT="/opt/frankenpanel"
 FRANKENPANEL_USER="frankenpanel"
 FRANKENPANEL_GROUP="frankenpanel"
 PYTHON_MIN_VERSION="3.12"  # Minimum required Python version
-# Panel access port (override with FRANKENPANEL_PORT=8888 before running, or edit below)
-PANEL_PORT="${FRANKENPANEL_PORT:-8080}"
+# Dashboard only on this port; API is internal (proxied behind Caddy on same port)
+PANEL_PORT="${FRANKENPANEL_PORT:-8090}"
 
 echo -e "${GREEN}=== FrankenPanel Installation Script ===${NC}"
 
@@ -39,7 +39,7 @@ else
 fi
 
 echo -e "${GREEN}Detected OS: $OS $VER${NC}"
-echo -e "${GREEN}Panel will be accessible on port: $PANEL_PORT (override with FRANKENPANEL_PORT=8888)${NC}"
+echo -e "${GREEN}Dashboard will be accessible on port $PANEL_PORT only (API is internal). Override with FRANKENPANEL_PORT=8090${NC}"
 
 # Resolve repo root early (before any 'cd' in the script) so path is correct
 SCRIPT_PATH="${BASH_SOURCE[0]}"
@@ -288,24 +288,13 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
-# Create Caddyfile
+# Create Caddyfile - dashboard only on one port; API used internally by dashboard (same origin)
 echo -e "${YELLOW}Creating Caddyfile...${NC}"
 cat > /etc/caddy/Caddyfile <<EOF
 # FrankenPanel Caddyfile
 # Auto-generated - do not edit manually
+# Dashboard only on :${PANEL_PORT}; backend API is internal (reverse-proxy on same port).
 
-# Admin dashboard (by hostname)
-admin.frankenpanel.local {
-    reverse_proxy 127.0.0.1:8000
-    tls internal
-}
-
-# Panel on port 80 - use http://YOUR_IP (works on most clouds without opening extra ports)
-:80 {
-    reverse_proxy 127.0.0.1:8000
-}
-
-# Panel on optional port - http://YOUR_IP:${PANEL_PORT} (open this port in cloud firewall if needed)
 :${PANEL_PORT} {
     reverse_proxy 127.0.0.1:8000
 }
@@ -316,7 +305,7 @@ if command -v caddy &> /dev/null; then
     caddy validate --config /etc/caddy/Caddyfile || true
 fi
 
-# Setup firewall
+# Setup firewall (panel = dashboard port only; 80/443 for managed sites if needed)
 echo -e "${YELLOW}Configuring firewall...${NC}"
 if command -v ufw &> /dev/null; then
     ufw allow 22/tcp
@@ -399,13 +388,9 @@ echo -e "${YELLOW}Important Security Information:${NC}"
 echo -e "1. Database passwords have been generated and stored securely"
 echo -e "2. Passwords are stored in: $SECRETS_FILE (root access only)"
 echo -e "3. Passwords are also configured in: $FRANKENPANEL_ROOT/control-panel/backend/.env"
-echo -e "4. Configure your domain in /etc/caddy/Caddyfile"
-echo -e "5. Access admin dashboard:"
-echo -e "   - http://YOUR_SERVER_IP          (port 80, try this first)"
-echo -e "   - http://YOUR_SERVER_IP:${PANEL_PORT}  (port ${PANEL_PORT}; if using a cloud VPS, open this port in the cloud firewall)"
-echo -e "   - http://admin.frankenpanel.local (if DNS/hosts set)"
-echo -e ""
-echo -e "${YELLOW}If the panel does not load: open port 80 (and ${PANEL_PORT} if used) in your cloud provider's firewall (DigitalOcean/AWS/Linode etc.).${NC}"
+echo -e "4. Access the dashboard (only port ${PANEL_PORT}; API is internal):"
+echo -e "   http://YOUR_SERVER_IP:${PANEL_PORT}"
+echo -e "   Open port ${PANEL_PORT} in your cloud provider's firewall if needed."
 echo -e ""
 echo -e "${YELLOW}To view passwords (root only):${NC}"
 echo -e "  cat $SECRETS_FILE"

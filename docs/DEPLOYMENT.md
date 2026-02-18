@@ -49,6 +49,53 @@
    sudo systemctl restart caddy
    ```
 
+### Accessing the Dashboard
+
+1. **Build the frontend** (if you haven’t already), so the panel UI is served:
+   ```bash
+   cd /opt/frankenpanel/control-panel/frontend
+   npm install
+   npm run build
+   sudo systemctl restart frankenpanel-backend
+   ```
+
+2. **Open the dashboard** in your browser (dashboard and API use **one port**; API is internal, only the dashboard is exposed):
+   - **http://YOUR_SERVER_IP:8090** (open port 8090 in your cloud firewall if needed)
+
+3. **Create the first admin user** (no users exist after a fresh install). On the server, run once:
+   ```bash
+   cd /opt/frankenpanel/control-panel/backend
+   source .env 2>/dev/null || true
+   ./venv/bin/python -c "
+   import asyncio
+   from app.core.database import AsyncSessionLocal, init_db
+   from app.models.user import User
+   from app.core.security import get_password_hash
+   async def main():
+       await init_db()
+       async with AsyncSessionLocal() as db:
+           from sqlalchemy import select
+           r = await db.execute(select(User).limit(1))
+           if r.scalar_one_or_none():
+               print('A user already exists. Use the login page.')
+               return
+           user = User(
+               username='admin',
+               email='admin@localhost',
+               full_name='Administrator',
+               hashed_password=get_password_hash('changeme'),
+               is_active=True,
+               is_superuser=True,
+           )
+           db.add(user)
+           await db.commit()
+           print('First admin created: username=admin, password=changeme')
+           print('Log in at the dashboard and change the password immediately.')
+   asyncio.run(main())
+   "
+   ```
+   Then log in at the dashboard with **admin** / **changeme** and change the password in the UI.
+
 ### Service Management
 
 ```bash
@@ -101,25 +148,22 @@ sudo journalctl -u caddy -f
 ### Troubleshooting
 
 **Panel not accessible (browser loads forever or connection timeout):**
-- **Use port 80 first:** Open `http://YOUR_SERVER_IP` (no port = 80). Most cloud providers allow port 80 by default.
-- **Cloud firewall:** On DigitalOcean, AWS, Linode, etc., open the panel port in the cloud console (Networking → Firewall / Security Groups). Add TCP port 80 and, if you use it, 8080 (or your `FRANKENPANEL_PORT`).
-- **Local firewall:** Ensure UFW allows the port: `sudo ufw allow 80/tcp` and `sudo ufw reload` (and same for 8080 if used). Check: `sudo ufw status`.
-- **Caddy listening:** On the server run `ss -tlnp | grep -E '80|8080'` to confirm Caddy is bound to the port.
+- **Dashboard is on port 8090 only:** Open `http://YOUR_SERVER_IP:8090`. The API is internal (same origin); no other ports are used for the panel.
+- **Cloud firewall:** Open port **8090** (or your `FRANKENPANEL_PORT`) in the cloud console (Networking → Firewall / Security Groups).
+- **Local firewall:** `sudo ufw allow 8090/tcp` and `sudo ufw reload`. Check: `sudo ufw status`.
+- **Caddy listening:** Run `ss -tlnp | grep 8090` to confirm Caddy is bound to the dashboard port.
 - **Backend up:** `sudo systemctl status frankenpanel-backend` and `sudo systemctl status caddy` must be active.
 
-**Default Caddy page instead of FrankenPanel (one port works, others don’t, or you see “Caddy” welcome):**
-- Caddy may still be using an old config. Force our Caddyfile to load: `sudo caddy validate --config /etc/caddy/Caddyfile` then `sudo systemctl restart caddy`.
-- Ensure the backend is running: `sudo systemctl status frankenpanel-backend`. If it’s down, Caddy will show 502; if you see a Caddy welcome page, the request isn’t being proxied (wrong config).
-- Ensure the frontend is built so the panel UI is served: `cd /opt/frankenpanel/control-panel/frontend && npm run build`.
-- For “other ports not working”: open the panel port (e.g. 8080) in the **cloud** firewall as well as UFW; try `http://YOUR_SERVER_IP` (port 80) and `http://YOUR_SERVER_IP:8080` after opening both.
+**Default Caddy page instead of FrankenPanel:**
+- Force the Caddyfile to load: `sudo caddy validate --config /etc/caddy/Caddyfile` then `sudo systemctl restart caddy`.
+- Ensure the backend is running and the frontend is built: `cd /opt/frankenpanel/control-panel/frontend && npm run build`, then `sudo systemctl restart frankenpanel-backend`.
 
-**HTTP 502 Bad Gateway (e.g. on port 80 or 8080):**
+**HTTP 502 Bad Gateway on port 8090:**
 - Caddy is running but the backend is not responding. Fix the backend first.
-- **Check backend status:** `sudo systemctl status frankenpanel-backend`. If it is **inactive** or **failed**, the backend is not running.
-- **Check backend logs:** `sudo journalctl -u frankenpanel-backend -n 80 --no-pager`. Look for Python tracebacks, “password authentication failed” (PostgreSQL), “Connection refused” (database), or “No such file” (missing .env or path).
-- **Ensure PostgreSQL is running:** `sudo systemctl status postgresql` and start it if needed: `sudo systemctl start postgresql`.
-- **Ensure .env exists and is readable:** `sudo ls -la /opt/frankenpanel/control-panel/backend/.env`. The service user must be able to read it (install script sets ownership).
-- **Restart backend after fixing:** `sudo systemctl restart frankenpanel-backend`, then try the panel again (e.g. `http://YOUR_SERVER_IP` or `http://YOUR_SERVER_IP:8080`).
+- **Check backend status:** `sudo systemctl status frankenpanel-backend`. If **inactive** or **failed**, the backend is not running.
+- **Check backend logs:** `sudo journalctl -u frankenpanel-backend -n 80 --no-pager`. Look for Python tracebacks, “password authentication failed” (PostgreSQL), or missing .env/path.
+- **Ensure PostgreSQL is running:** `sudo systemctl start postgresql` if needed.
+- **Restart backend:** `sudo systemctl restart frankenpanel-backend`, then try `http://YOUR_SERVER_IP:8090` again.
 
 **Backend not starting / “permission denied for schema public”:**
 - Check logs: `sudo journalctl -u frankenpanel-backend -n 50`. If you see **permission denied for schema public** (PostgreSQL 15+), grant schema rights:
