@@ -305,6 +305,11 @@ admin.frankenpanel.local {
 }
 EOF
 
+# Validate and load Caddy config (restart so our config is used, not any previous default)
+if command -v caddy &> /dev/null; then
+    caddy validate --config /etc/caddy/Caddyfile || true
+fi
+
 # Setup firewall
 echo -e "${YELLOW}Configuring firewall...${NC}"
 if command -v ufw &> /dev/null; then
@@ -378,7 +383,8 @@ systemctl daemon-reload
 systemctl enable frankenpanel-backend
 systemctl enable caddy
 systemctl start frankenpanel-backend
-systemctl start caddy
+# Restart Caddy so it loads our Caddyfile (avoids keeping an old "default Caddy" config)
+systemctl restart caddy
 
 echo -e "${GREEN}=== Installation Complete ===${NC}"
 echo -e "${GREEN}FrankenPanel has been installed successfully!${NC}"

@@ -107,6 +107,12 @@ sudo journalctl -u caddy -f
 - **Caddy listening:** On the server run `ss -tlnp | grep -E '80|8080'` to confirm Caddy is bound to the port.
 - **Backend up:** `sudo systemctl status frankenpanel-backend` and `sudo systemctl status caddy` must be active.
 
+**Default Caddy page instead of FrankenPanel (one port works, others don’t, or you see “Caddy” welcome):**
+- Caddy may still be using an old config. Force our Caddyfile to load: `sudo caddy validate --config /etc/caddy/Caddyfile` then `sudo systemctl restart caddy`.
+- Ensure the backend is running: `sudo systemctl status frankenpanel-backend`. If it’s down, Caddy will show 502; if you see a Caddy welcome page, the request isn’t being proxied (wrong config).
+- Ensure the frontend is built so the panel UI is served: `cd /opt/frankenpanel/control-panel/frontend && npm run build`.
+- For “other ports not working”: open the panel port (e.g. 8080) in the **cloud** firewall as well as UFW; try `http://YOUR_SERVER_IP` (port 80) and `http://YOUR_SERVER_IP:8080` after opening both.
+
 **Backend not starting:**
 - Check logs: `sudo journalctl -u frankenpanel-backend -n 50`
 - Verify database connection
