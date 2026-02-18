@@ -1,0 +1,27 @@
+# Git and CI
+.git
+.github
+
+# Python
+backend/venv
+backend/__pycache__
+**/*.pyc
+*.egg-info
+
+# Node
+frontend/node_modules
+frontend/dist
+
+# Env and secrets
+.env
+.env.*
+*.log
+
+# Docs and dev (optional; keep if you want them in image)
+docs
+*.md
+!README.md
+
+# Misc
+.DS_Store
+*.swp

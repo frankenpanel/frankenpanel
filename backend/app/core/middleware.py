@@ -12,10 +12,28 @@ from app.models.audit import AuditAction
 from app.core.audit import log_audit
 from typing import Callable
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import RedirectResponse
 import time
 import json
 
 security = HTTPBearer(auto_error=False)
+
+
+class PreferFrontendMiddleware(BaseHTTPMiddleware):
+    """Redirect browser navigation to /api/* to the dashboard so users always get the frontend; API is only used by the frontend."""
+
+    async def dispatch(self, request: Request, call_next):
+        path = request.scope.get("path", "")
+        accept = request.headers.get("accept", "")
+        # If this looks like browser navigation to an API path, send user to dashboard
+        if (
+            request.method == "GET"
+            and path.startswith("/api")
+            and "text/html" in accept
+            and "application/json" not in accept
+        ):
+            return RedirectResponse(url="/", status_code=302)
+        return await call_next(request)
 
 
 async def get_current_user(

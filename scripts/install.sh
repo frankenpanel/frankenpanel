@@ -19,6 +19,8 @@ FRANKENPANEL_GROUP="frankenpanel"
 PYTHON_MIN_VERSION="3.12"  # Minimum required Python version
 # Dashboard only on this port; API is internal (proxied behind Caddy on same port)
 PANEL_PORT="${FRANKENPANEL_PORT:-8090}"
+# Pre-built image from GitHub Actions (set to empty to skip and use repo frontend source only)
+FRANKENPANEL_IMAGE="${FRANKENPANEL_IMAGE:-ghcr.io/frankenpanel/frankenpanel:latest}"
 
 echo -e "${GREEN}=== FrankenPanel Installation Script ===${NC}"
 
@@ -252,9 +254,26 @@ if [ ! -f "$REPO_ROOT/backend/requirements.txt" ]; then
 fi
 echo -e "${YELLOW}Copying FrankenPanel backend to $FRANKENPANEL_ROOT/control-panel/backend...${NC}"
 cp -a "$REPO_ROOT/backend/." "$FRANKENPANEL_ROOT/control-panel/backend/"
-# Copy frontend source for later build (optional)
-if [ -d "$REPO_ROOT/frontend" ]; then
-    echo -e "${YELLOW}Copying frontend source...${NC}"
+
+# Pre-built frontend: pull image and extract dist so no npm build on server
+FRONTEND_FROM_IMAGE=0
+if [ -n "$FRANKENPANEL_IMAGE" ] && command -v docker &>/dev/null; then
+    echo -e "${YELLOW}Pulling pre-built image and extracting frontend...${NC}"
+    if docker pull "$FRANKENPANEL_IMAGE" 2>/dev/null; then
+        CID=$(docker create "$FRANKENPANEL_IMAGE" 2>/dev/null) || true
+        if [ -n "$CID" ]; then
+            mkdir -p "$FRANKENPANEL_ROOT/control-panel/frontend/dist"
+            if docker cp "$CID:/app/control-panel/frontend/dist/." "$FRANKENPANEL_ROOT/control-panel/frontend/dist/" 2>/dev/null; then
+                FRONTEND_FROM_IMAGE=1
+                echo -e "${GREEN}Frontend copied from image (no build needed).${NC}"
+            fi
+            docker rm "$CID" 2>/dev/null || true
+        fi
+    fi
+fi
+# Fallback: copy frontend source for manual build later
+if [ "$FRONTEND_FROM_IMAGE" -ne 1 ] && [ -d "$REPO_ROOT/frontend" ]; then
+    echo -e "${YELLOW}Copying frontend source (run 'npm run build' in frontend dir to build dashboard).${NC}"
     cp -a "$REPO_ROOT/frontend/." "$FRANKENPANEL_ROOT/control-panel/frontend/"
 fi
 
@@ -391,6 +410,11 @@ echo -e "3. Passwords are also configured in: $FRANKENPANEL_ROOT/control-panel/b
 echo -e "4. Access the dashboard (only port ${PANEL_PORT}; API is internal):"
 echo -e "   http://YOUR_SERVER_IP:${PANEL_PORT}"
 echo -e "   Open port ${PANEL_PORT} in your cloud provider's firewall if needed."
+if [ "$FRONTEND_FROM_IMAGE" = "1" ]; then
+    echo -e "   Dashboard UI was installed from the pre-built image (no npm build needed)."
+else
+    echo -e "   If the dashboard is blank, build the frontend: cd $FRANKENPANEL_ROOT/control-panel/frontend && npm install && npm run build"
+fi
 echo -e ""
 echo -e "${YELLOW}To view passwords (root only):${NC}"
 echo -e "  cat $SECRETS_FILE"

@@ -15,6 +15,7 @@
    ```bash
    sudo bash scripts/install.sh
    ```
+   The script will use the **pre-built Docker image** (from GitHub Actions) to install the dashboard UI if Docker is installed and the image is available, so you don't need to run `npm run build` on the server. To skip the image and use repo files only, run: `FRANKENPANEL_IMAGE= sudo bash scripts/install.sh`.
 
 2. **Configure Environment**
    - Edit `/opt/frankenpanel/control-panel/backend/.env`
@@ -36,7 +37,7 @@
    ```
    Replace `admin.frankenpanel.local` with your actual domain.
 
-5. **Build Frontend**
+5. **Build Frontend** (only if the installer did not use the pre-built image)
    ```bash
    cd /opt/frankenpanel/control-panel/frontend
    npm install
@@ -95,6 +96,12 @@
    "
    ```
    Then log in at the dashboard with **admin** / **changeme** and change the password in the UI.
+
+### Pre-built image (CI)
+
+- **Build:** On every push to `main`, GitHub Actions builds a Docker image (see `.github/workflows/build-image.yml`) and pushes it to GitHub Container Registry: `ghcr.io/frankenpanel/frankenpanel:latest`.
+- **Installer:** The install script uses this image by default when Docker is available: it pulls the image and extracts the built frontend into `/opt/frankenpanel/control-panel/frontend/dist`, so no `npm run build` on the server.
+- **Override image:** To use a different tag or registry, run: `FRANKENPANEL_IMAGE=ghcr.io/yourorg/frankenpanel:v1.0 sudo bash scripts/install.sh`. To disable the image and copy only from the repo: `FRANKENPANEL_IMAGE= sudo bash scripts/install.sh`.
 
 ### Service Management
 
