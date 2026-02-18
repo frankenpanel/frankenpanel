@@ -38,6 +38,14 @@ fi
 
 echo -e "${GREEN}Detected OS: $OS $VER${NC}"
 
+# Resolve repo root early (before any 'cd' in the script) so path is correct
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+if [ "${SCRIPT_PATH#/}" = "$SCRIPT_PATH" ]; then
+    SCRIPT_PATH="$(pwd)/$SCRIPT_PATH"
+fi
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 # Generate secure random passwords
 echo -e "${YELLOW}Generating secure passwords...${NC}"
 POSTGRES_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-32)
@@ -223,13 +231,6 @@ if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ]; then
 fi
 
 # Copy FrankenPanel backend from repo to installation directory
-# Resolve script path to absolute so it works when run from any directory (e.g. sudo bash scripts/install.sh)
-SCRIPT_PATH="${BASH_SOURCE[0]}"
-if [ "${SCRIPT_PATH#/}" = "$SCRIPT_PATH" ]; then
-    SCRIPT_PATH="$(pwd)/$SCRIPT_PATH"
-fi
-SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 if [ ! -f "$REPO_ROOT/backend/requirements.txt" ]; then
     echo -e "${RED}Error: Could not find backend/requirements.txt.${NC}"
     echo -e "Please run this script from the FrankenPanel repository root:"
