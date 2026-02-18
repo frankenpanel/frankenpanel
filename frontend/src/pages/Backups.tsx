@@ -163,7 +163,7 @@ function CreateBackupModal({
   const queryClient = useQueryClient()
 
   const createMutation = useMutation({
-    mutationFn: (data: Record<string, unknown>) => api.post('/backups/', data),
+    mutationFn: (data: Record<string, unknown>) => api.post('/backups/', { backup_data: data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['backups'] })
       onClose()

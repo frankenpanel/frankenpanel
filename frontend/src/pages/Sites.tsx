@@ -186,7 +186,7 @@ function CreateSiteModal({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient()
 
   const createMutation = useMutation({
-    mutationFn: (data: Record<string, unknown>) => api.post('/sites/', data),
+    mutationFn: (data: Record<string, unknown>) => api.post('/sites/', { site_data: data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sites'] })
       onClose()

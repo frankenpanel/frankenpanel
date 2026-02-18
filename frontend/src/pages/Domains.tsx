@@ -138,7 +138,7 @@ function CreateDomainModal({
   const queryClient = useQueryClient()
 
   const createMutation = useMutation({
-    mutationFn: (data: Record<string, unknown>) => api.post('/domains/', data),
+    mutationFn: (data: Record<string, unknown>) => api.post('/domains/', { domain_data: data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['domains'] })
       onClose()
