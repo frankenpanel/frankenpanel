@@ -147,7 +147,11 @@ function CreateDomainModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    createMutation.mutate(formData)
+    const payload = {
+      ...formData,
+      site_id: Number(siteId ?? formData.site_id),
+    }
+    createMutation.mutate(payload)
   }
 
   return (

@@ -1,7 +1,7 @@
 """
 Domain management endpoints
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from app.core.database import get_db
@@ -35,7 +35,7 @@ async def list_domains(
 
 @router.post("/", response_model=DomainResponse, status_code=status.HTTP_201_CREATED)
 async def create_domain(
-    domain_data: DomainCreate,
+    domain_data: DomainCreate = Body(..., embed=False),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -67,7 +67,7 @@ async def create_domain(
 @router.put("/{domain_id}", response_model=DomainResponse)
 async def update_domain(
     domain_id: int,
-    domain_data: DomainUpdate,
+    domain_data: DomainUpdate = Body(..., embed=False),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):

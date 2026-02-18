@@ -1,9 +1,10 @@
 """
 User management endpoints
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from typing import List
 from app.core.database import get_db
 from app.core.middleware import get_current_user, require_permission
@@ -27,14 +28,19 @@ async def list_users(
     if not await require_permission(Resource.USER, Action.READ, current_user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied")
     
-    result = await db.execute(select(User).offset(skip).limit(limit))
+    result = await db.execute(
+        select(User)
+        .offset(skip)
+        .limit(limit)
+        .options(selectinload(User.roles).selectinload(Role.permissions))
+    )
     users = result.scalars().all()
     return [UserResponse.model_validate(user) for user in users]
 
 
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(
-    user_data: UserCreate,
+    user_data: UserCreate = Body(..., embed=False),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -44,7 +50,6 @@ async def create_user(
     
     service = UserService(db)
     user = await service.create_user(user_data)
-    
     await log_audit(
         user_id=current_user.id,
         username=current_user.username,
@@ -54,8 +59,11 @@ async def create_user(
         success=True,
         db=db,
     )
-    
-    return UserResponse.model_validate(user)
+    result = await db.execute(
+        select(User).where(User.id == user.id).options(selectinload(User.roles).selectinload(Role.permissions))
+    )
+    user_with_roles = result.scalar_one_or_none() or user
+    return UserResponse.model_validate(user_with_roles)
 
 
 @router.get("/{user_id}", response_model=UserResponse)
@@ -68,19 +76,21 @@ async def get_user(
     if not await require_permission(Resource.USER, Action.READ, current_user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied")
     
-    result = await db.execute(select(User).where(User.id == user_id))
+    result = await db.execute(
+        select(User)
+        .where(User.id == user_id)
+        .options(selectinload(User.roles).selectinload(Role.permissions))
+    )
     user = result.scalar_one_or_none()
-    
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    
     return UserResponse.model_validate(user)
 
 
 @router.put("/{user_id}", response_model=UserResponse)
 async def update_user(
     user_id: int,
-    user_data: UserUpdate,
+    user_data: UserUpdate = Body(..., embed=False),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -90,7 +100,6 @@ async def update_user(
     
     service = UserService(db)
     user = await service.update_user(user_id, user_data)
-    
     await log_audit(
         user_id=current_user.id,
         username=current_user.username,
@@ -100,8 +109,11 @@ async def update_user(
         success=True,
         db=db,
     )
-    
-    return UserResponse.model_validate(user)
+    result = await db.execute(
+        select(User).where(User.id == user_id).options(selectinload(User.roles).selectinload(Role.permissions))
+    )
+    user_with_roles = result.scalar_one_or_none() or user
+    return UserResponse.model_validate(user_with_roles)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -141,7 +153,7 @@ async def list_roles(
 
 @router.post("/roles/", response_model=RoleResponse, status_code=status.HTTP_201_CREATED)
 async def create_role(
-    role_data: RoleCreate,
+    role_data: RoleCreate = Body(..., embed=False),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):

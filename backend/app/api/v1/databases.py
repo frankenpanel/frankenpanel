@@ -1,7 +1,7 @@
 """
 Database management endpoints
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from app.core.database import get_db
@@ -35,7 +35,7 @@ async def list_databases(
 
 @router.post("/", response_model=DatabaseResponse, status_code=status.HTTP_201_CREATED)
 async def create_database(
-    db_data: DatabaseCreate,
+    db_data: DatabaseCreate = Body(..., embed=False),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -86,7 +86,7 @@ async def get_database(
 @router.put("/{database_id}", response_model=DatabaseResponse)
 async def update_database(
     database_id: int,
-    db_data: DatabaseUpdate,
+    db_data: DatabaseUpdate = Body(..., embed=False),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):

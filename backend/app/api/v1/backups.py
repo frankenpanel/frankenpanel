@@ -1,7 +1,7 @@
 """
 Backup management endpoints
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from app.core.database import get_db
@@ -43,7 +43,7 @@ async def list_backups(
 
 @router.post("/", response_model=BackupResponse, status_code=status.HTTP_201_CREATED)
 async def create_backup(
-    backup_data: BackupCreate,
+    backup_data: BackupCreate = Body(..., embed=False),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -69,7 +69,7 @@ async def create_backup(
 
 @router.post("/restore", status_code=status.HTTP_200_OK)
 async def restore_backup(
-    restore_data: BackupRestoreRequest,
+    restore_data: BackupRestoreRequest = Body(..., embed=False),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):

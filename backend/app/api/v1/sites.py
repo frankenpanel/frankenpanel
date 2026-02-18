@@ -1,7 +1,7 @@
 """
 Site management endpoints
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from app.core.database import get_db
@@ -34,7 +34,7 @@ async def list_sites(
 
 @router.post("/", response_model=SiteResponse, status_code=status.HTTP_201_CREATED)
 async def create_site(
-    site_data: SiteCreate,
+    site_data: SiteCreate = Body(..., embed=False),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -80,7 +80,7 @@ async def get_site(
 @router.put("/{site_id}", response_model=SiteResponse)
 async def update_site(
     site_id: int,
-    site_data: SiteUpdate,
+    site_data: SiteUpdate = Body(..., embed=False),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):

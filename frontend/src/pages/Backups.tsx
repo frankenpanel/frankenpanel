@@ -172,7 +172,12 @@ function CreateBackupModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    createMutation.mutate(formData)
+    const payload = {
+      ...formData,
+      site_id: Number(siteId ?? formData.site_id),
+      description: formData.description || undefined,
+    }
+    createMutation.mutate(payload)
   }
 
   return (
