@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import api from '../services/api'
-import { Globe, Database, Link as LinkIcon, HardDrive, TrendingUp, Activity } from 'lucide-react'
+import { Globe, Database, Link as LinkIcon, HardDrive, Activity } from 'lucide-react'
 
 interface Stats {
   sites: number

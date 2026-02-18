@@ -1,8 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../services/api'
-import { ArrowLeft, Play, Square, Save } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowLeft, Play, Square } from 'lucide-react'
 
 interface Site {
   id: number

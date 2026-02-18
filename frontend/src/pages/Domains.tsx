@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import api from '../services/api'
-import { Link as LinkIcon, Plus, Trash2, Globe } from 'lucide-react'
+import { Plus, Trash2, Globe } from 'lucide-react'
 import { useState } from 'react'
 
 interface Domain {
