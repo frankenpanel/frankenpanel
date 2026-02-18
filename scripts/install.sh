@@ -216,15 +216,19 @@ mv frankenphp /usr/local/bin/frankenphp
 # Install Caddy
 echo -e "${YELLOW}Installing Caddy...${NC}"
 if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ]; then
-    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --batch --yes --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
     curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
     apt-get update
     apt-get install -y caddy
 fi
 
 # Copy FrankenPanel backend from repo to installation directory
-# (Script must be run from the cloned repo: e.g. ./scripts/install.sh from repo root)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Resolve script path to absolute so it works when run from any directory (e.g. sudo bash scripts/install.sh)
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+if [ "${SCRIPT_PATH#/}" = "$SCRIPT_PATH" ]; then
+    SCRIPT_PATH="$(pwd)/$SCRIPT_PATH"
+fi
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 if [ ! -f "$REPO_ROOT/backend/requirements.txt" ]; then
     echo -e "${RED}Error: Could not find backend/requirements.txt.${NC}"
