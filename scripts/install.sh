@@ -190,6 +190,11 @@ ALTER ROLE frankenpanel SET default_transaction_isolation TO 'read committed';
 ALTER ROLE frankenpanel SET timezone TO 'UTC';
 GRANT ALL PRIVILEGES ON DATABASE frankenpanel TO frankenpanel;
 EOF
+    # Grant schema public (required on PostgreSQL 15+; otherwise "permission denied for schema public" on create_all)
+    sudo -u postgres psql -d frankenpanel <<EOF
+GRANT USAGE ON SCHEMA public TO frankenpanel;
+GRANT CREATE ON SCHEMA public TO frankenpanel;
+EOF
 fi
 
 # Install MySQL/MariaDB

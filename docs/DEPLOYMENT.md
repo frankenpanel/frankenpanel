@@ -121,10 +121,13 @@ sudo journalctl -u caddy -f
 - **Ensure .env exists and is readable:** `sudo ls -la /opt/frankenpanel/control-panel/backend/.env`. The service user must be able to read it (install script sets ownership).
 - **Restart backend after fixing:** `sudo systemctl restart frankenpanel-backend`, then try the panel again (e.g. `http://YOUR_SERVER_IP` or `http://YOUR_SERVER_IP:8080`).
 
-**Backend not starting:**
-- Check logs: `sudo journalctl -u frankenpanel-backend -n 50`
-- Verify database connection
-- Check .env file permissions
+**Backend not starting / “permission denied for schema public”:**
+- Check logs: `sudo journalctl -u frankenpanel-backend -n 50`. If you see **permission denied for schema public** (PostgreSQL 15+), grant schema rights:
+  ```bash
+  sudo -u postgres psql -d frankenpanel -c "GRANT USAGE ON SCHEMA public TO frankenpanel; GRANT CREATE ON SCHEMA public TO frankenpanel;"
+  ```
+  Then restart: `sudo systemctl restart frankenpanel-backend`.
+- Verify database connection and .env file permissions.
 
 **Caddy not serving sites:**
 - Check Caddyfile syntax: `sudo caddy validate --config /etc/caddy/Caddyfile`
