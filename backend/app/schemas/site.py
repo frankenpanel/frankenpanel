@@ -18,6 +18,11 @@ class SiteBase(BaseModel):
 class SiteCreate(SiteBase):
     domain: str = Field(..., description="Primary domain for the site")
     create_database: bool = Field(default=True, description="Create database automatically")
+    # WordPress auto-install (required when site_type is wordpress for full install)
+    wp_site_title: Optional[str] = Field(None, min_length=1, max_length=255)
+    wp_admin_user: Optional[str] = Field(None, min_length=2, max_length=60)
+    wp_admin_password: Optional[str] = Field(None, min_length=8)
+    wp_admin_email: Optional[str] = None
 
 
 class SiteUpdate(BaseModel):

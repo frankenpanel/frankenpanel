@@ -43,8 +43,10 @@ async def create_site(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied")
     
     service = SiteService(db)
-    site = await service.create_site(site_data, current_user.id)
-    
+    try:
+        site = await service.create_site(site_data, current_user.id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
     await log_audit(
         user_id=current_user.id,
         username=current_user.username,

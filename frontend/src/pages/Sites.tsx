@@ -178,12 +178,17 @@ export default function Sites() {
 function CreateSiteModal({ onClose }: { onClose: () => void }) {
   const [formData, setFormData] = useState({
     name: '',
-    site_type: 'wordpress',
+    site_type: 'custom_php' as 'wordpress' | 'custom_php' | 'joomla',
     domain: '',
     php_version: '8.2',
     create_database: true,
+    wp_site_title: '',
+    wp_admin_user: '',
+    wp_admin_password: '',
+    wp_admin_email: '',
   })
   const queryClient = useQueryClient()
+  const isWordPress = formData.site_type === 'wordpress'
 
   const createMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => api.post('/sites/', { site_data: data }),
@@ -195,13 +200,29 @@ function CreateSiteModal({ onClose }: { onClose: () => void }) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    createMutation.mutate(formData)
+    const payload: Record<string, unknown> = {
+      name: formData.name,
+      site_type: formData.site_type,
+      domain: formData.domain,
+      php_version: formData.php_version,
+      create_database: isWordPress ? true : formData.create_database,
+    }
+    if (isWordPress) {
+      payload.wp_site_title = formData.wp_site_title
+      payload.wp_admin_user = formData.wp_admin_user
+      payload.wp_admin_password = formData.wp_admin_password
+      payload.wp_admin_email = formData.wp_admin_email
+    }
+    createMutation.mutate(payload)
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-20">
       <div className="card-stripe w-full max-w-md p-6 shadow-stripe-lg">
         <h3 className="text-lg font-semibold text-gray-900">Create new site</h3>
+        <p className="mt-1 text-sm text-gray-500">
+          {isWordPress ? 'WordPress will be installed and set live on the domain.' : 'Create site with name, domain, and PHP version.'}
+        </p>
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700">Site name</label>
@@ -209,21 +230,10 @@ function CreateSiteModal({ onClose }: { onClose: () => void }) {
               type="text"
               required
               className="input-stripe"
+              placeholder="e.g. my-site"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Site type</label>
-            <select
-              className="input-stripe"
-              value={formData.site_type}
-              onChange={(e) => setFormData({ ...formData, site_type: e.target.value })}
-            >
-              <option value="wordpress">WordPress</option>
-              <option value="joomla">Joomla</option>
-              <option value="custom_php">Custom PHP</option>
-            </select>
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700">Domain</label>
@@ -231,9 +241,22 @@ function CreateSiteModal({ onClose }: { onClose: () => void }) {
               type="text"
               required
               className="input-stripe"
+              placeholder="example.com"
               value={formData.domain}
               onChange={(e) => setFormData({ ...formData, domain: e.target.value })}
             />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Site type</label>
+            <select
+              className="input-stripe"
+              value={formData.site_type}
+              onChange={(e) => setFormData({ ...formData, site_type: e.target.value as 'wordpress' | 'custom_php' | 'joomla' })}
+            >
+              <option value="custom_php">Custom PHP</option>
+              <option value="wordpress">WordPress</option>
+              <option value="joomla">Joomla</option>
+            </select>
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700">PHP version</label>
@@ -247,15 +270,72 @@ function CreateSiteModal({ onClose }: { onClose: () => void }) {
               <option value="8.0">8.0</option>
             </select>
           </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={formData.create_database}
-              onChange={(e) => setFormData({ ...formData, create_database: e.target.checked })}
-              className="h-4 w-4 rounded border-stripe-border text-stripe-primary focus:ring-stripe-primary"
-            />
-            <label className="text-sm text-gray-700">Create database automatically</label>
-          </div>
+
+          {!isWordPress && (
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={formData.create_database}
+                onChange={(e) => setFormData({ ...formData, create_database: e.target.checked })}
+                className="h-4 w-4 rounded border-stripe-border text-stripe-primary focus:ring-stripe-primary"
+              />
+              <label className="text-sm text-gray-700">Create database automatically</label>
+            </div>
+          )}
+
+          {isWordPress && (
+            <>
+              <div className="border-t border-stripe-border pt-4 mt-2">
+                <p className="text-sm font-medium text-gray-900 mb-3">WordPress setup (auto-install)</p>
+                <p className="text-xs text-gray-500 mb-3">Database and admin user will be created. Site will be started on the domain.</p>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Site title</label>
+                <input
+                  type="text"
+                  required={isWordPress}
+                  className="input-stripe"
+                  placeholder="My WordPress Site"
+                  value={formData.wp_site_title}
+                  onChange={(e) => setFormData({ ...formData, wp_site_title: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Admin username</label>
+                <input
+                  type="text"
+                  required={isWordPress}
+                  className="input-stripe"
+                  placeholder="admin"
+                  value={formData.wp_admin_user}
+                  onChange={(e) => setFormData({ ...formData, wp_admin_user: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Admin password</label>
+                <input
+                  type="password"
+                  required={isWordPress}
+                  className="input-stripe"
+                  placeholder="••••••••"
+                  value={formData.wp_admin_password}
+                  onChange={(e) => setFormData({ ...formData, wp_admin_password: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Admin email</label>
+                <input
+                  type="email"
+                  required={isWordPress}
+                  className="input-stripe"
+                  placeholder="admin@example.com"
+                  value={formData.wp_admin_email}
+                  onChange={(e) => setFormData({ ...formData, wp_admin_email: e.target.value })}
+                />
+              </div>
+            </>
+          )}
+
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary">
               Cancel

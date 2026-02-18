@@ -16,7 +16,12 @@ import os
 import shutil
 import secrets
 import string
+import zipfile
+import subprocess
+import asyncio
+import tempfile
 from typing import Optional
+from urllib.request import urlretrieve
 
 
 class SiteService:
@@ -36,9 +41,13 @@ class SiteService:
         # Get next available port
         worker_port = await self._get_next_worker_port()
         
-        # Create site directory
+        # Create site directory (fail if path already exists so we don't overwrite)
         site_path = os.path.join(settings.SITES_DIR, slug)
-        os.makedirs(site_path, mode=0o755, exist_ok=False)
+        if os.path.exists(site_path):
+            raise ValueError(
+                f"A site directory already exists for this name. Choose a different site name or remove the existing directory: {site_path}"
+            )
+        os.makedirs(site_path, mode=0o755)
         
         # Create site record
         site = Site(
@@ -64,22 +73,41 @@ class SiteService:
             domain_type=DomainType.PRIMARY,
         )
         
-        # Create database if requested
-        if site_data.create_database:
-            await self.db_service.create_database(
+        # Create database if requested (required for WordPress)
+        db_record = None
+        if site_data.create_database or site_data.site_type == SiteType.WORDPRESS:
+            db_record = await self.db_service.create_database(
                 site_id=site.id,
                 name=f"{slug}_db",
                 db_type=DatabaseType.MYSQL,
             )
         
-        # Generate site configuration files
-        await self._generate_site_config(site)
+        # WordPress: download core first, then generate config
+        if site_data.site_type == SiteType.WORDPRESS:
+            await self._download_wordpress(site.path)
+        # Generate site configuration files (pass primary domain for wp-config)
+        await self._generate_site_config(site, primary_domain=site_data.domain)
+        # WordPress: run wp core install if admin credentials provided
+        if site_data.site_type == SiteType.WORDPRESS and all([
+            getattr(site_data, "wp_site_title", None),
+            getattr(site_data, "wp_admin_user", None),
+            getattr(site_data, "wp_admin_password", None),
+            getattr(site_data, "wp_admin_email", None),
+        ]):
+            await self._run_wordpress_install(site, site_data)
         
         # Create FrankenPHP worker configuration
         await self.frankenphp_service.create_worker_config(site)
         
         await self.db.commit()
         await self.db.refresh(site)
+        
+        # Start site so it's live (especially for WordPress)
+        if site_data.site_type == SiteType.WORDPRESS:
+            await self.frankenphp_service.start_worker(site)
+            site.status = SiteStatus.ACTIVE
+            await self.db.commit()
+            await self.db.refresh(site)
         
         return site
     
@@ -187,31 +215,25 @@ class SiteService:
             return max_port + 1
         return settings.FRANKENPHP_WORKER_START_PORT
     
-    async def _generate_site_config(self, site: Site):
-        """Generate site configuration files"""
-        site_path = site.path
-        
+    async def _generate_site_config(self, site: Site, primary_domain: str):
+        """Generate site configuration files. primary_domain is the main domain (e.g. from SiteCreate)."""
         if site.site_type == SiteType.WORDPRESS:
-            await self._generate_wp_config(site)
+            await self._generate_wp_config(site, primary_domain)
         elif site.site_type == SiteType.JOOMLA:
             await self._generate_joomla_config(site)
         else:
             await self._generate_env_file(site)
     
-    async def _generate_wp_config(self, site: Site):
-        """Generate wp-config.php for WordPress"""
-        # Get database for site
+    async def _generate_wp_config(self, site: Site, primary_domain: str):
+        """Generate wp-config.php for WordPress."""
         result = await self.db.execute(
             select(Database).where(Database.site_id == site.id).limit(1)
         )
         db = result.scalar_one_or_none()
-        
         if not db:
             return
-        
-        # Generate WordPress salts
         wp_salts = self._generate_wp_salts()
-        
+        db_password = self.db_service._decrypt_password(db.encrypted_password)
         config_content = f"""<?php
 /**
  * WordPress Configuration File
@@ -220,7 +242,7 @@ class SiteService:
 
 define('DB_NAME', '{db.name}');
 define('DB_USER', '{db.username}');
-define('DB_PASSWORD', '{self.db_service._decrypt_password(db.encrypted_password)}');
+define('DB_PASSWORD', '{db_password}');
 define('DB_HOST', '{db.host}:{db.port}');
 define('DB_CHARSET', 'utf8mb4');
 define('DB_COLLATE', '');
@@ -231,12 +253,11 @@ define('WP_DEBUG', false);
 define('WP_DEBUG_LOG', true);
 define('WP_DEBUG_DISPLAY', false);
 
-define('WP_HOME', 'https://{site.domains[0].domain if site.domains else "example.com"}');
-define('WP_SITEURL', 'https://{site.domains[0].domain if site.domains else "example.com"}');
+define('WP_HOME', 'https://{primary_domain}');
+define('WP_SITEURL', 'https://{primary_domain}');
 
 /* That's all, stop editing! Happy publishing. */
 """
-        
         config_path = os.path.join(site.path, "wp-config.php")
         with open(config_path, "w") as f:
             f.write(config_content)
@@ -279,10 +300,53 @@ DB_PASSWORD={self.db_service._decrypt_password(db.encrypted_password)}
             "AUTH_KEY", "SECURE_AUTH_KEY", "LOGGED_IN_KEY", "NONCE_KEY",
             "AUTH_SALT", "SECURE_AUTH_SALT", "LOGGED_IN_SALT", "NONCE_SALT"
         ]
-        
         lines = []
         for salt in salts:
             value = secrets.token_urlsafe(64)
             lines.append(f"define('{salt}', '{value}');")
-        
         return "\n".join(lines)
+
+    async def _download_wordpress(self, site_path: str) -> None:
+        """Download and extract WordPress latest into site_path."""
+        url = "https://wordpress.org/latest.zip"
+        loop = asyncio.get_event_loop()
+        with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
+            tmp_path = tmp.name
+        try:
+            await loop.run_in_executor(None, lambda: urlretrieve(url, tmp_path))
+            with zipfile.ZipFile(tmp_path, "r") as z:
+                # Zip has top-level "wordpress/" folder; extract its contents into site_path
+                for name in z.namelist():
+                    if name.startswith("wordpress/") and not name.endswith("/"):
+                        out = os.path.join(site_path, os.path.relpath(name, "wordpress"))
+                        os.makedirs(os.path.dirname(out), exist_ok=True)
+                        with z.open(name) as src, open(out, "wb") as dst:
+                            dst.write(src.read())
+                    elif name == "wordpress/":
+                        continue
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+
+    async def _run_wordpress_install(self, site: Site, site_data: SiteCreate) -> None:
+        """Run wp core install (WP-CLI) to make WordPress live. No-op if WP-CLI not found."""
+        wp_cli = shutil.which("wp")
+        if not wp_cli:
+            return
+        url = f"https://{site_data.domain}"
+        proc = await asyncio.create_subprocess_exec(
+            wp_cli,
+            "core",
+            "install",
+            f"--url={url}",
+            f"--title={site_data.wp_site_title or site.name}",
+            f"--admin_user={site_data.wp_admin_user}",
+            f"--admin_password={site_data.wp_admin_password}",
+            f"--admin_email={site_data.wp_admin_email}",
+            f"--path={site.path}",
+            "--skip-email",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd=site.path,
+        )
+        await proc.wait()
