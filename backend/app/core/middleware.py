@@ -1,7 +1,7 @@
 """
 Middleware: authentication, logging, security
 """
-from fastapi import Request, HTTPException, status
+from fastapi import Request, HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
@@ -18,14 +18,14 @@ security = HTTPBearer(auto_error=False)
 async def get_current_user(
     request: Request,
     credentials: HTTPAuthorizationCredentials = None,
-    db: AsyncSession = None
+    db: AsyncSession = Depends(get_db),
 ) -> User:
     """Get current authenticated user"""
-    if not db:
+    # When called from middleware (not via Depends), db may not be injected; get session then
+    if not isinstance(db, AsyncSession):
         async for session in get_db():
             db = session
             break
-    
     # Try to get token from Authorization header
     token = None
     if credentials:
