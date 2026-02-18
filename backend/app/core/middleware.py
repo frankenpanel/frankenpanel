@@ -11,6 +11,7 @@ from app.models.user import User, Role
 from app.models.audit import AuditAction
 from app.core.audit import log_audit
 from typing import Callable
+from starlette.middleware.base import BaseHTTPMiddleware
 import time
 import json
 
@@ -121,20 +122,17 @@ async def require_permission(
     return False
 
 
-class AuditMiddleware:
+class AuditMiddleware(BaseHTTPMiddleware):
     """Middleware to log all requests"""
-    
-    async def __call__(self, request: Request, call_next: Callable):
+
+    async def dispatch(self, request: Request, call_next: Callable):
         start_time = time.time()
-        
-        # Process request
+
         response = await call_next(request)
-        
-        # Log request
+
         process_time = time.time() - start_time
         response.headers["X-Process-Time"] = str(process_time)
-        
-        # Log to audit if authenticated
+
         try:
             user = await get_current_user(request)
             await log_audit(
@@ -147,23 +145,22 @@ class AuditMiddleware:
                 user_agent=request.headers.get("user-agent"),
                 success=response.status_code < 400,
             )
-        except:
+        except Exception:
             pass  # Not authenticated, skip audit
-        
+
         return response
 
 
-class SecurityHeadersMiddleware:
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Add security headers to responses"""
-    
-    async def __call__(self, request: Request, call_next: Callable):
+
+    async def dispatch(self, request: Request, call_next: Callable):
         response = await call_next(request)
-        
-        # Security headers
+
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         response.headers["Content-Security-Policy"] = "default-src 'self'"
-        
+
         return response
