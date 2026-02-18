@@ -26,13 +26,14 @@ class UserUpdate(BaseModel):
 
 class UserResponse(UserBase):
     id: int
+    email: str  # override: allow stored values like admin@localhost (EmailStr rejects them)
     is_active: bool
     is_superuser: bool
     last_login: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
     roles: List["RoleResponse"] = []
-    
+
     class Config:
         from_attributes = True
 
