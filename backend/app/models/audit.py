@@ -1,7 +1,7 @@
 """
 Audit log model
 """
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum, Text, JSON
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Enum, Text, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum

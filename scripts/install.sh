@@ -177,10 +177,11 @@ if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ]; then
     systemctl start postgresql
     systemctl enable postgresql
     
-    # Create database and user with generated password
+    # Create database and user with generated password (idempotent: always set password so re-runs stay in sync with .env)
     sudo -u postgres psql <<EOF
 CREATE DATABASE frankenpanel;
 CREATE USER frankenpanel WITH PASSWORD '$POSTGRES_PASSWORD';
+ALTER ROLE frankenpanel WITH PASSWORD '$POSTGRES_PASSWORD';
 ALTER ROLE frankenpanel SET client_encoding TO 'utf8';
 ALTER ROLE frankenpanel SET default_transaction_isolation TO 'read committed';
 ALTER ROLE frankenpanel SET timezone TO 'UTC';
@@ -265,7 +266,7 @@ Description=FrankenPanel Backend API
 After=network.target postgresql.service
 
 [Service]
-Type=notify
+Type=simple
 User=$FRANKENPANEL_USER
 Group=$FRANKENPANEL_GROUP
 WorkingDirectory=$FRANKENPANEL_ROOT/control-panel/backend
